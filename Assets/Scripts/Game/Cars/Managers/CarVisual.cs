@@ -22,13 +22,13 @@ namespace Game.Cars.Managers
         private float _targetGlow;
         private float _squash;
 
-        public CarVisual(PaintSlot[] paintSlots, Transform[] wheels, Transform body, TrailRenderer[] trails)
+        public CarVisual(PaintSlot[] paintSlots, Transform[] wheels, Transform body, TrailRenderer[] trails, float wheelRadius)
         {
             _paintSlots = paintSlots;
             _wheels = wheels;
             _body = body;
             _trails = trails;
-            _wheelRadius = wheels[0].position.y;
+            _wheelRadius = wheelRadius;
             _bodyScale = body.localScale;
         }
 

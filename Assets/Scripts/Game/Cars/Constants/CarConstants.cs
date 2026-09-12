@@ -7,6 +7,7 @@ namespace Game.Cars.Constants
         public static readonly int BaseColorProp = Shader.PropertyToID("_BaseColor");
         public static readonly int EmissionColorProp = Shader.PropertyToID("_EmissionColor");
         public const float FullCircle = 360f;
+        public const float NoCrossing = -1f;
         public const float LaneBlendSpeed = 2.2f;
         public const float TrailWidth = 0.7f;
         public const float TrailDuration = 0.35f;
