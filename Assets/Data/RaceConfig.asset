@@ -88,6 +88,10 @@ MonoBehaviour:
     - 29
     - 44
     - 60
+    levelCurves: 0000000001000000020000000300000004000000
+    punchSharpness: 1.5
+    twoStepDepth: 0.7
+    surgeSharpness: 1.45
     levelColors:
     - {r: 0.75, g: 0.78, b: 0.82, a: 1}
     - {r: 0.35, g: 0.8, b: 1, a: 1}

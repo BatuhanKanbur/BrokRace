@@ -16,7 +16,7 @@ namespace Editor.Constants
         public const string FailLabel = "FAIL";
         public const string ZeroLabel = "0";
         public const float PercentScale = 100f;
-        public const string ContractHeader = "level,logicStepsPerSecond,baseSpeed,expectedWindowDistance,measuredWindowDistance,expectedExtra,measuredExtra,boostedSeconds,deviationPercent";
+        public const string ContractHeader = "level,curve,logicStepsPerSecond,baseSpeed,expectedWindowDistance,measuredWindowDistance,expectedExtra,measuredExtra,boostedSeconds,deviationPercent";
         public const string RuleHeader = "rule,result,detail";
         public const string MatrixHeader = "scenario,seed,playerFinishTime,playerRank,accepted,rejected,energySpent,energyWasted,boostDistance,expectedBoostDistance,assistDistance,overtakesMade,overtakesConceded,finalGapAhead,finalGapBehind,finalGapToLeader,avgGapAheadLast20,avgGapBehindLast20,avgGapToLeaderLast20,packSpreadAtWinnerFinish,avgPackSpread,maxPackSpread,leadChanges";
         public const string RivalHeader = "scenario,seed,car,profile,isPlayer,finishOrder,finishTime,gapToPlayerSeconds,accepted,rejected,energySpent,energyWasted,boostDistance,assistDistance,averageSpeed";

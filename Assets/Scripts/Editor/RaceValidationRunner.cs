@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using Game.Boost.Logics;
 using Game.Configuration.Structure;
 using Game.Input.Managers;
 using Game.Simulation.Logics;
@@ -46,6 +47,7 @@ namespace Editor
                 {
                     var check = BoostContractProbe.Measure(config.boost, config.race.baseSpeed, step, level);
                     builder.Append(check.Level).Append(',')
+                        .Append(BoostCurves.Describe(config.boost.levelCurves[level - MinLevel])).Append(',')
                         .Append(Number(1f / step)).Append(',')
                         .Append(Number(check.BaseSpeed)).Append(',')
                         .Append(Number(check.ExpectedWindowDistance)).Append(',')

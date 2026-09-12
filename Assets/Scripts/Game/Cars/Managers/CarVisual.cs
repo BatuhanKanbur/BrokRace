@@ -1,7 +1,6 @@
 using Game.Cars.Interfaces;
 using Game.Cars.Structure;
 using UnityEngine;
-using static Game.Boost.Constants.BoostConstants;
 using static Game.Cars.Constants.CarConstants;
 
 namespace Game.Cars.Managers
@@ -19,8 +18,8 @@ namespace Game.Cars.Managers
         private Color _paint = Color.white;
         private Color _glow;
         private float _glowStrength;
-        private float _targetGlow;
         private float _squash;
+        private bool _isBoosting;
         private bool _cueDirty;
 
         public CarVisual(PaintSlot[] paintSlots, Transform[] wheels, Transform body, TrailRenderer[] trails,
@@ -43,26 +42,35 @@ namespace Game.Cars.Managers
         public void PlayBoost(int level, Color color)
         {
             _glow = color;
-            _targetGlow = (level - MinLevel) / (float)LevelSpan;
-            _squash = BoostSquash * _targetGlow;
+            _isBoosting = true;
             _cueDirty = true;
         }
 
         public void StopBoost()
         {
-            _targetGlow = 0f;
+            _isBoosting = false;
             _cueDirty = true;
         }
 
-        public void Present(float speed, float deltaTime)
+        public void Present(float speed, float intensity, float deltaTime)
         {
             var spin = speed / (Tau * _wheelRadius) * FullCircle * deltaTime;
             foreach (var wheel in _wheels)
                 wheel.Rotate(Vector3.right, spin, Space.Self);
 
             if (_cueDirty) FlushCue();
-            var rate = _targetGlow > _glowStrength ? EmissionRiseSpeed : EmissionFadeSpeed;
-            _glowStrength = Mathf.MoveTowards(_glowStrength, _targetGlow, rate * deltaTime);
+            var reach = Mathf.Clamp01(intensity);
+            if (_isBoosting)
+            {
+                foreach (var trail in _trails)
+                    trail.widthMultiplier = TrailWidth * (TrailFloor + reach);
+                _glowStrength = Mathf.MoveTowards(_glowStrength, reach, EmissionRiseSpeed * deltaTime);
+                _squash = Mathf.Max(_squash, BoostSquash * reach);
+            }
+            else
+            {
+                _glowStrength = Mathf.MoveTowards(_glowStrength, 0f, EmissionFadeSpeed * deltaTime);
+            }
             _squash = Mathf.MoveTowards(_squash, 0f, SquashRecoverSpeed * deltaTime);
             _body.localScale = new Vector3(
                 _bodyScale.x * (1f - _squash),
@@ -73,7 +81,7 @@ namespace Game.Cars.Managers
 
         public void Reset()
         {
-            _targetGlow = 0f;
+            _isBoosting = false;
             _glowStrength = 0f;
             _squash = 0f;
             _cueDirty = false;
@@ -81,6 +89,7 @@ namespace Game.Cars.Managers
             foreach (var trail in _trails)
             {
                 trail.emitting = false;
+                trail.widthMultiplier = 0f;
                 trail.Clear();
             }
             Apply();
@@ -89,14 +98,13 @@ namespace Game.Cars.Managers
         private void FlushCue()
         {
             _cueDirty = false;
-            var tint = _targetGlow > 0f ? _glow : _paint;
+            var tint = _isBoosting ? _glow : _paint;
             foreach (var trail in _trails)
             {
                 trail.startColor = tint;
                 trail.endColor = new Color(tint.r, tint.g, tint.b, 0f);
-                trail.widthMultiplier = TrailWidth * _targetGlow;
                 trail.time = TrailDuration;
-                trail.emitting = _targetGlow > 0f;
+                trail.emitting = _isBoosting;
             }
         }
 

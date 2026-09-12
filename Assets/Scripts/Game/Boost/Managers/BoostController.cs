@@ -1,5 +1,6 @@
 using System;
 using Game.Boost.Enums;
+using Game.Boost.Logics;
 using Game.Boost.Interfaces;
 using Game.Configuration.Structure;
 using UnityEngine;
@@ -23,6 +24,8 @@ namespace Game.Boost.Managers
         public bool IsActive => _activeLevel > 0;
         public int ActiveLevel => _activeLevel;
         public float Multiplier => _activeLevel > 0 ? _activeLevel : NeutralLevel;
+        public BoostCurve Curve => CurveOf(_activeLevel > 0 ? _activeLevel : MinLevel);
+        public BoostSettings Settings => _settings;
         public float WindowDuration => _settings.windowDuration;
         public float RemainingWindow => _remainingWindow;
         public float RemainingCooldown => _remainingCooldown;
@@ -43,6 +46,8 @@ namespace Game.Boost.Managers
         }
 
         public float CostOf(int level) => _settings.levelCosts[Clamp(level) - MinLevel];
+
+        public BoostCurve CurveOf(int level) => _settings.levelCurves[Clamp(level) - MinLevel];
 
         public bool CanAfford(int level) => _energy >= CostOf(level);
 

@@ -1,7 +1,9 @@
 using Game.Boost.Interfaces;
+using Game.Boost.Logics;
 using Game.Cars.Interfaces;
 using Game.Cars.Structure;
 using UnityEngine;
+using static Game.Boost.Constants.BoostConstants;
 using static Game.Cars.Constants.CarConstants;
 
 namespace Game.Cars.Managers
@@ -21,6 +23,7 @@ namespace Game.Cars.Managers
         public float BoostDistance { get; private set; }
         public float AssistDistance { get; private set; }
         public float BaseSpeed => NaturalSpeed * BalanceScale;
+        public float Intensity => BaseSpeed > 0f ? (Speed / BaseSpeed - 1f) / LevelSpan : 0f;
 
         public CarMotion(IBoostState boost, IBoostClock clock)
         {
@@ -41,10 +44,11 @@ namespace Game.Cars.Managers
             var travelled = 0f;
             var boosted = _boost.IsActive ? Mathf.Min(stepTime, _boost.RemainingWindow) : 0f;
             if (boosted > 0f)
-                travelled += Integrate(_boost.Multiplier, boosted, 0f, ref crossOffset);
+                travelled += Integrate(boosted, _boost.Multiplier - 1f,
+                    _boost.WindowDuration - _boost.RemainingWindow, 0f, ref crossOffset);
             var plain = stepTime - boosted;
             if (plain > 0f)
-                travelled += Integrate(1f, plain, boosted, ref crossOffset);
+                travelled += Integrate(plain, 0f, 0f, boosted, ref crossOffset);
             _clock.Tick(stepTime);
             return new MotionStep(travelled, crossOffset);
         }
@@ -61,19 +65,43 @@ namespace Game.Cars.Managers
             AssistDistance = 0f;
         }
 
-        private float Integrate(float multiplier, float slice, float sliceStart, ref float crossOffset)
+        private float Integrate(float slice, float gain, float windowStart, float sliceStart, ref float crossOffset)
         {
-            var speed = BaseSpeed * multiplier;
-            var step = speed * slice;
-            if (crossOffset < 0f && Distance < _finishDistance && Distance + step >= _finishDistance)
-                crossOffset = sliceStart + (_finishDistance - Distance) / speed;
+            var effective = Effective(slice, gain, windowStart);
+            var span = BaseSpeed * effective;
+            if (crossOffset < 0f && Distance < _finishDistance && Distance + span >= _finishDistance)
+                crossOffset = sliceStart + SolveSlice((_finishDistance - Distance) / BaseSpeed, gain, windowStart, slice);
             BaseDistance += NaturalSpeed * slice;
-            BoostDistance += NaturalSpeed * (multiplier - 1f) * slice;
-            AssistDistance += NaturalSpeed * (BalanceScale - 1f) * multiplier * slice;
-            Distance += step;
-            Speed = speed;
+            BoostDistance += NaturalSpeed * (effective - slice);
+            AssistDistance += NaturalSpeed * (BalanceScale - 1f) * effective;
+            Distance += span;
+            Speed = BaseSpeed * (1f + gain * RateAt(windowStart + slice));
             _clock.Advance(slice);
-            return step;
+            return span;
         }
+
+        private float Effective(float slice, float gain, float windowStart) =>
+            gain > 0f
+                ? slice + gain * _boost.WindowDuration * (IntegralAt(windowStart + slice) - IntegralAt(windowStart))
+                : slice;
+
+        private float SolveSlice(float target, float gain, float windowStart, float slice)
+        {
+            if (gain <= 0f) return Mathf.Clamp(target, 0f, slice);
+            var guess = target / (1f + gain * RateAt(windowStart));
+            for (var pass = 0; pass < CrossingRefinements; pass++)
+            {
+                var reached = Effective(guess, gain, windowStart);
+                var slope = 1f + gain * RateAt(windowStart + guess);
+                guess -= (reached - target) / slope;
+            }
+            return Mathf.Clamp(guess, 0f, slice);
+        }
+
+        private float IntegralAt(float windowTime) =>
+            BoostCurves.Integral(_boost.Curve, windowTime / _boost.WindowDuration, _boost.Settings);
+
+        private float RateAt(float windowTime) =>
+            BoostCurves.Rate(_boost.Curve, windowTime / _boost.WindowDuration, _boost.Settings);
     }
 }

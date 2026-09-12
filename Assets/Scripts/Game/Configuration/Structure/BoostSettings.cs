@@ -1,4 +1,5 @@
 using System;
+using Game.Boost.Enums;
 using UnityEngine;
 
 namespace Game.Configuration.Structure
@@ -12,6 +13,17 @@ namespace Game.Configuration.Structure
         public float energyOnStart = 75f;
         public float energyRegenPerSecond = 5f;
         public float[] levelCosts = { 0f, 14f, 29f, 44f, 60f };
+        public BoostCurve[] levelCurves =
+        {
+            BoostCurve.Flat,
+            BoostCurve.Smooth,
+            BoostCurve.Punch,
+            BoostCurve.TwoStep,
+            BoostCurve.Surge
+        };
+        [Range(1.1f, 3f)] public float punchSharpness = 1.5f;
+        [Range(0f, 0.95f)] public float twoStepDepth = 0.7f;
+        [Range(1.1f, 3f)] public float surgeSharpness = 1.45f;
         public Color[] levelColors =
         {
             new(0.75f, 0.78f, 0.82f),

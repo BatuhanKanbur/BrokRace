@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Game.Boost.Enums;
+using Game.Boost.Logics;
 using Game.Boost.Managers;
 using Game.Cars.Managers;
 using Game.Configuration.Structure;
@@ -46,7 +47,79 @@ namespace Game.Simulation.Logics
                 ClosedWindowRejects(settings),
                 NeutralLevelMatchesCoasting(settings, baseSpeed, stepTime),
                 OutOfRangeLevelIsClamped(settings, baseSpeed, stepTime),
-                FinishCrossingIsSubStepExact(settings, baseSpeed, stepTime)
+                FinishCrossingIsSubStepExact(settings, baseSpeed, stepTime),
+                EveryCurveDeliversTheSameDistance(settings, baseSpeed, stepTime),
+                CurvesChangeTheDeliveryNotTheTotal(settings, baseSpeed, stepTime)
+            };
+        }
+
+        private static RuleCheck EveryCurveDeliversTheSameDistance(BoostSettings settings, float baseSpeed,
+            float stepTime)
+        {
+            var worst = 0f;
+            var offender = BoostCurve.Flat;
+            foreach (BoostCurve curve in System.Enum.GetValues(typeof(BoostCurve)))
+            {
+                var shaped = Reshaped(settings, curve);
+                for (var level = MinLevel; level <= MaxLevel; level++)
+                {
+                    var check = Measure(shaped, baseSpeed, stepTime, level);
+                    if (check.DeviationPercent <= worst) continue;
+                    worst = check.DeviationPercent;
+                    offender = curve;
+                }
+            }
+            return new RuleCheck("every curve delivers the same window distance", worst < DeviationBudget,
+                $"worst deviation {worst:0.######}% on {BoostCurves.Describe(offender)}");
+        }
+
+        private static RuleCheck CurvesChangeTheDeliveryNotTheTotal(BoostSettings settings, float baseSpeed,
+            float stepTime)
+        {
+            var punch = HalfWindowShare(settings, baseSpeed, stepTime, BoostCurve.Punch);
+            var flat = HalfWindowShare(settings, baseSpeed, stepTime, BoostCurve.Flat);
+            var surge = HalfWindowShare(settings, baseSpeed, stepTime, BoostCurve.Surge);
+            return new RuleCheck("curves move the distance inside the window",
+                punch > flat + CurveSeparation && surge < flat - CurveSeparation,
+                $"first half share punch {punch:0.###} flat {flat:0.###} surge {surge:0.###}");
+        }
+
+        private static float HalfWindowShare(BoostSettings settings, float baseSpeed, float stepTime, BoostCurve curve)
+        {
+            var shaped = Reshaped(settings, curve);
+            var boost = new BoostController();
+            boost.Configure(shaped);
+            var motion = new CarMotion(boost, boost);
+            motion.Configure(baseSpeed, NoFinish);
+            boost.Open();
+            boost.Request(MaxLevel);
+            var steps = Mathf.RoundToInt(shaped.windowDuration * HalfWindow / stepTime);
+            for (var step = 0; step < steps; step++)
+                motion.Advance(stepTime);
+            var half = motion.BoostDistance;
+            while (boost.IsActive)
+                motion.Advance(stepTime);
+            return half / motion.BoostDistance;
+        }
+
+        private static BoostSettings Reshaped(BoostSettings source, BoostCurve curve)
+        {
+            var curves = new BoostCurve[LevelCount];
+            for (var index = 0; index < curves.Length; index++)
+                curves[index] = curve;
+            return new BoostSettings
+            {
+                windowDuration = source.windowDuration,
+                cooldown = source.cooldown,
+                energyCapacity = source.energyCapacity,
+                energyOnStart = source.energyCapacity,
+                energyRegenPerSecond = source.energyRegenPerSecond,
+                levelCosts = source.levelCosts,
+                levelCurves = curves,
+                punchSharpness = source.punchSharpness,
+                twoStepDepth = source.twoStepDepth,
+                surgeSharpness = source.surgeSharpness,
+                levelColors = source.levelColors
             };
         }
 

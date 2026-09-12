@@ -84,7 +84,7 @@ namespace Game.Cars.Behaviours
             transform.position = _track.GetPosition(_motion.Distance, _laneOffset);
             transform.rotation = Quaternion.Slerp(transform.rotation, _track.GetRotation(_motion.Distance),
                 RotationBlendSpeed * deltaTime);
-            _visual.Present(_motion.Speed, deltaTime);
+            _visual.Present(_motion.Speed, _motion.Intensity, deltaTime);
         }
 
         public void SetBalanceScale(float scale) => _motion.SetBalanceScale(scale);

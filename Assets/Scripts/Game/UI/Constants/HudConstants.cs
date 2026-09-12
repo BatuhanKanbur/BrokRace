@@ -21,7 +21,7 @@ namespace Game.UI.Constants
         public const string SpeedFormat = "{0} m/s";
         public const string RemainingFormat = "{0} m";
         public const string RankFormat = "{0}/{1}";
-        public const string ActiveBoostFormat = "x{0}  {1:0.00}s";
+        public const string ActiveBoostFormat = "x{0}  {1}  {2:0.00}s";
         public const string AcceptedFormat = "BOOST x{0}";
         public const float MillisPerSecond = 1000f;
         public const float FeedbackFadeDuration = 0.7f;

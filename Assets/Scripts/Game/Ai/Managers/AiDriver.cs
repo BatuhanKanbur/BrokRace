@@ -95,10 +95,12 @@ namespace Game.Ai.Managers
                 if (!_car.BoostState.CanAfford(level)) continue;
                 if (_car.BoostState.Energy - cost < reserve) continue;
                 strike = StrikePressure(level);
-                var score = _profile.strikeWeight * strike
+                var front = BoostCurves.FrontBias(_car.BoostState.CurveOf(level), _economy) / NeutralBias;
+                var back = 2f - front;
+                var score = _profile.strikeWeight * strike * front
                             + _profile.defendWeight * defend
                             + _profile.paceWeight * pace
-                            + _profile.closeWeight * closing * (level / (float)MaxLevel)
+                            + _profile.closeWeight * closing * (level / (float)MaxLevel) * back
                             + _profile.spillWeight * spill
                             + _profile.efficiencyWeight * BoostEconomy.Efficiency(_economy, _car.NaturalSpeed, level, MinLevel + 1)
                             + _settings.levelFitWeight * (1f - Mathf.Abs(level - _profile.levelBias) / (float)LevelSpan)

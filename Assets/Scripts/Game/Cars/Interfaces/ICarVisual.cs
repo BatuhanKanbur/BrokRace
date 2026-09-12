@@ -7,7 +7,7 @@ namespace Game.Cars.Interfaces
         public void Paint(Color color);
         public void PlayBoost(int level, Color color);
         public void StopBoost();
-        public void Present(float speed, float deltaTime);
+        public void Present(float speed, float intensity, float deltaTime);
         public void Reset();
     }
 }

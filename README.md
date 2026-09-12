@@ -37,13 +37,44 @@ Girdisiz araç `v0` taban hızıyla ilerler. Kabul edilen bir `k` tuşu **1.00 s
 pencere açar ve o pencerede toplam hız `k × v0` olur. Yani pencere boyunca alınan yol
 `k × v0 × 1 sn`, normale göre kazanç `(k−1) × v0`. `v0 = 16 m/sn` için:
 
-| Tuş | Toplam hız | 1 saniyede yol | Ek kazanç | Maliyet | m / enerji |
+| Tuş | 1 saniyede yol | Ek kazanç | Maliyet | m / enerji | Eğri |
 |---|---|---|---|---|---|
-| 1 | 16 m/sn | 16 m | 0 m | 0 | – |
-| 2 | 32 m/sn | 32 m | 16 m | 14 | 1.143 |
-| 3 | 48 m/sn | 48 m | 32 m | 29 | 1.103 |
-| 4 | 64 m/sn | 64 m | 48 m | 44 | 1.091 |
-| 5 | 80 m/sn | 80 m | 64 m | 60 | 1.067 |
+| 1 | 16 m | 0 m | 0 | – | Flat |
+| 2 | 32 m | 16 m | 14 | 1.143 | Smooth |
+| 3 | 48 m | 32 m | 29 | 1.103 | **Punch** |
+| 4 | 64 m | 48 m | 44 | 1.091 | **Two-step** |
+| 5 | 80 m | 64 m | 60 | 1.067 | **Surge** |
+
+### Teslimat eğrileri
+
+Beş tuş sadece "aynı şeyin büyüğü" olmasın diye her seviye kendi mesafesini **farklı
+bir hız eğrisiyle** teslim ediyor. GDD bunu açıkça serbest bırakıyor: *"Görsel
+ivmelenme/yavaşlama kullanabilirsiniz; hız eğrisinin toplam mesafesi bu sözleşmeyi
+korumalıdır."* Toplam mesafe bütün eğrilerde birebir aynı, değişen tek şey o mesafenin
+saniye içinde nereye düştüğü.
+
+Matematiksel olarak: pencerede anlık hız `v0 · (1 + (k−1)·f(t/T))`, burada `f`
+normalize edilmiş bir şekil fonksiyonu (`∫₀¹f = 1`). Toplam mesafe
+`v0·T + (k−1)·v0·T·∫₀¹f = k·v0·T` — şekilden bağımsız olarak **tam**. Alt adım
+integrali kapalı formülle (`F`, `f`'in ters türevi) alınıyor, dolayısıyla sayısal
+hata birikmiyor.
+
+| Eğri | Karakter | Pencerenin ilk yarısına düşen pay | Ne zaman iyi |
+|---|---|---|---|
+| Flat | Sabit | %50 | Referans |
+| Smooth | Yumuşak yükselip sönen | %50 | Tempo tutmak |
+| Punch | Anında vuruş, sonra sönüm | **%64.6** | Öndekini **şimdi** yakalamak |
+| Two-step | Çift vuruş, ortada nefes | %50 | Uzun düzlükte iki kademe |
+| Surge | Yavaş başlar, sonda patlar | **%36.6** | **Çizgiye koşu**, geç bağlanma |
+
+Bu yüzdeler tahmin değil, `buff_rules.csv` içinde ölçülüyor. Pratik sonucu: 3 tuşu
+boşluğu anında kapatır (64 m/sn ile başlar, 16'ya iner), 5 tuşu ise sona doğru
+patladığı için çizgiye koşuda daha iyidir. Karar artık "kaç bassam" değil, "hangi
+karakter bu duruma uyuyor" sorusu.
+
+Rakipler de bunu biliyor: `AiDriver` her seviyenin eğri ön-yükünü puanına katıyor,
+yani öndekini yakalamak isteyen rakip Punch'a, finalde bağlanacak olan Surge'e meyleder.
+Ayrı bir tablo değil, doğrudan eğrinin kendi integralinden türetiliyor.
 
 Aynı anda tek etki çalışır. Pencere açıkken gelen istek **yok sayılır**: süre uzamaz,
 çarpan toplanmaz, kuyruk tutulmaz. Reddedilen istek ne hız verir ne kaynak harcar.
@@ -71,8 +102,13 @@ Doğrulama koşularında hiç basmayan oyuncu **381 enerji** israf ediyor.
 Ret nedeni ekranın ortasında yazıyla belirir: `BOOST ALREADY RUNNING`, `COOLING DOWN`,
 `NOT ENOUGH ENERGY`, `RACE NOT RUNNING`. Ayrıca 1–5 tuş kutuları anlık durumu gösterir:
 karşılanabilir seviyeler açık, karşılanamayanlar ve pencere/bekleme sırasındakiler sönük,
-aktif seviye kendi renginde. Kabul edilen hamlede kutu ve alt bar seviye rengine döner,
-araçtan seviye renginde iz çıkar, kamera görüş açısı genişler.
+aktif seviye kendi renginde. Kabul edilen hamlede kutu ve alt bar seviye rengine döner
+ve üstte seviyenin eğri adı yazar (`x3 PUNCH 0.68s`).
+
+Eğriler ekranda da okunuyor: araçtan çıkan izin kalınlığı ve gövdenin parlaması anlık
+hız çarpanını takip ediyor, kamera görüş açısı da öyle. Punch'ta iz açılışta patlayıp
+söner, Two-step'te iki kez şişer, Surge'de sona doğru büyür. Ayrı efekt asseti yok;
+görsel kimliği eğrinin kendisi üretiyor.
 
 ---
 
@@ -151,7 +187,8 @@ uygulanmaz, telemetride oyuncunun katkısı her koşuda tam olarak 0.
   harcadıysa dengeleme tamamen kapanır. Kötü oyun telafi edilmez.
 
 Ölçülen sonuç: 12 koşunun tamamında herhangi bir araca yazılan en yüksek dengeleme katkısı
-**5.72 m** (1300 m'lik pistin %0.44'ü), oyuncuya yazılan **0.00 m**.
+**8.09 m** (1300 m'lik pistin %0.62'si, ±45 m bütçesinin beşte biri), oyuncuya yazılan
+**0.00 m**.
 
 ### Oyuncu avantajını koruma
 
@@ -193,6 +230,8 @@ dosyasında.
 | Parametre | Etkisi |
 |---|---|
 | `boost.levelCosts` | Seviyeler arası verim farkı. Maliyetleri doğrusallaştırmak bütün seviyeleri eşitler, dikleştirmek yüksek seviyeleri öldürür. |
+| `boost.levelCurves` | Hangi tuşun hangi karakteri taşıdığı. Hepsini `Flat` yapmak sözleşmeyi bozmaz, sadece beş tuşu aynılaştırır. |
+| `boost.punchSharpness` / `surgeSharpness` / `twoStepDepth` | Eğrilerin sertliği. Punch 1.5'te 64 m/sn ile açar; 2.5'e çıkarmak açılışı 96 m/sn yapar, toplam mesafe yine değişmez. |
 | `boost.energyRegenPerSecond` | Yarış boyunca toplam dönüştürülebilir enerji, dolayısıyla iyi ve kötü oyun arasındaki fark. |
 | `boost.cooldown` | Basma ritmi. 1.35 sn'nin altına inen karar aralıkları garantili ret üretir. |
 | `AiProfile.speedScale` | En sert kaldıraç: %1 doğal hız ≈ 0.6 sn ≈ 14 m. Merdiveni bununla kuruyorum. |
@@ -210,8 +249,8 @@ görselsiz sürülüyor, yani bu sayılar paralel bir modelden değil oyunun ken
 
 | Dosya | İçerik |
 |---|---|
-| `buff_contract.csv` | Her seviye için 4 farklı mantık adımında ölçülmüş pencere mesafesi |
-| `buff_rules.csv` | 7 sözleşme kuralı |
+| `buff_contract.csv` | Her seviye ve eğri için 4 farklı mantık adımında ölçülmüş pencere mesafesi |
+| `buff_rules.csv` | 9 sözleşme kuralı |
 | `lifecycle.csv` | Bitişe denk gelen buff, aynı alt adımda çizgi geçişi, peş peşe restart |
 | `frame_rate.csv` | 30/60/120 FPS karşılaştırması |
 | `race_matrix.csv` | 12 yarışın oyuncu özeti |
@@ -227,31 +266,37 @@ tarafından üretiliyor.
 
 | Senaryo | Seed | Süre | Sıra | Kabul | Ret | Harcanan | İsraf | Buff mesafesi | Sollama +/− | Son %20 öndeki | Son %20 lidere |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Dengeli | 1337 | 57.03 | **1** | 17 | 1 | 359 | 0 | 387.6 | 5 / 5 | 0.0 | 0.0 |
-| Dengeli | 90210 | 58.33 | 4 | 14 | 2 | 333 | 0 | 366.8 | 3 / 6 | 14.7 | 51.3 |
+| Dengeli | 1337 | 57.07 | **1** | 17 | 1 | 359 | 0 | 387.0 | 5 / 5 | 0.0 | 0.0 |
+| Dengeli | 90210 | 58.29 | 4 | 14 | 2 | 333 | 0 | 367.5 | 3 / 6 | 14.6 | 50.6 |
 | Dengeli | 777013 | 57.25 | **1** | 12 | 1 | 349 | 0 | 384.0 | 6 / 6 | 1.4 | 1.4 |
 | Hiç buff yok | 1337 | 81.25 | 8 | 0 | 0 | 0 | 381 | 0.0 | 0 / 7 | 297.7 | 370.0 |
 | Hiç buff yok | 90210 | 81.25 | 8 | 0 | 0 | 0 | 381 | 0.0 | 0 / 7 | 248.7 | 408.1 |
 | Hiç buff yok | 777013 | 81.25 | 8 | 0 | 0 | 0 | 381 | 0.0 | 0 / 7 | 308.5 | 372.1 |
-| Sürekli 5 | 1337 | 57.85 | **1** | 6 | 626 | 360 | 0 | 374.4 | 11 / 11 | 2.3 | 5.0 |
-| Sürekli 5 | 90210 | 57.85 | 4 | 6 | 632 | 360 | 0 | 374.4 | 5 / 8 | 14.6 | 38.4 |
-| Sürekli 5 | 777013 | 57.85 | 3 | 6 | 621 | 360 | 0 | 374.4 | 11 / 14 | 18.2 | 25.7 |
+| Sürekli 5 | 1337 | 57.89 | **1** | 6 | 627 | 360 | 0 | 374.4 | 11 / 11 | 2.3 | 5.0 |
+| Sürekli 5 | 90210 | 57.89 | 4 | 6 | 634 | 360 | 0 | 374.4 | 5 / 8 | 14.6 | 38.4 |
+| Sürekli 5 | 777013 | 57.89 | 3 | 6 | 631 | 360 | 0 | 374.4 | 11 / 14 | 18.2 | 25.7 |
 | Erken atak + pasif | 1337 | 73.25 | 8 | 2 | 13 | 120 | 221 | 128.0 | 2 / 9 | 150.6 | 247.5 |
 | Erken atak + pasif | 90210 | 73.25 | 8 | 2 | 13 | 120 | 221 | 128.0 | 1 / 8 | 150.4 | 278.2 |
 | Erken atak + pasif | 777013 | 73.25 | 8 | 2 | 13 | 120 | 221 | 128.0 | 1 / 8 | 172.6 | 266.9 |
 
 **Yorum.** Sıra oyun kalitesini takip ediyor: dengeli 1/4/1, sürekli 5 1/4/3, erken atak
-8, hiç basmayan 8. Dengeli oyun ortalama 57.5 sn, sürekli 5 ise 57.85 sn — aradaki 0.3 sn
+8, hiç basmayan 8. Dengeli oyun ortalama 57.5 sn, sürekli 5 ise 57.89 sn — aradaki 0.4 sn
 tam olarak verim farkının karşılığı, yani sürekli 5 oynanabilir ama en iyisi değil.
 Dengeli koşularda israf sıfır; iyi oyunun tanımı "enerjiyi tavanda bekletmemek" hâline
 gelmiş durumda.
 
 Rekabet tarafı: altı çekişmeli koşuda **üç farklı kazanan** (oyuncu 3, Metronome 2,
-Closer 1), podyum 1.1–2.0 sn içinde kapanıyor, sekiz aracın bitiş aralığı 5.3–7.9 sn,
-lider değişimi koşu başına 3–13. Profillerin ortalama bitiş sırası Metronome 2.3,
-Closer 2.7, Defender 3.1, Striker 3.9, Drumbeat 5.2, Erratic 6.5, Ambusher 7.1 — yani
-merdiven duruyor ama hiçbiri sabit değil, her profilin en iyi ve en kötü derecesi
-arasında en az iki sıra var.
+Closer 1), podyum **0.74–1.80 sn** içinde kapanıyor, sekiz aracın bitiş aralığı
+4.6–8.0 sn, lider değişimi koşu başına 3–13. Profillerin ortalama bitiş sırası
+Metronome 2.2, Defender 2.8, Closer 2.9, Striker 4.1, Drumbeat 5.7, Erratic 6.1,
+Ambusher 7.0 — merdiven duruyor ama hiçbiri sabit değil. Altı çekişmeli koşunun
+kazananları oyuncu, Metronome ve Closer; 12 koşunun tamamına bakıldığında Defender ve
+Striker de birinciliği görüyor. Yedi profilin hepsinde en iyi ve en kötü derece arasında
+en az üç sıra fark var, yani sıralama tohuma göre gerçekten değişiyor.
+
+Eğri çeşitlendirmesi rekabeti sıkılaştırdı: podyum farkı 1.14–2.01 sn'den 0.74–1.80 sn'ye
+indi, çünkü rakipler artık duruma uygun eğriyi seçiyor ve son bölümde Surge'e bağlananlar
+gerçekten yetişiyor.
 
 ### Buff hesabı
 
@@ -259,17 +304,17 @@ arasında en az iki sıra var.
 37 mantık adımında ölçüldü. Ölçüm `BoostDistance` sayacını değil aracın gerçekten aldığı
 yolu okuyor.
 
-| Tuş | Beklenen pencere mesafesi | Ölçülen | En kötü sapma |
-|---|---|---|---|
-| 1 | 16 m | 16 m | %0.000060 |
-| 2 | 32 m | 32 m | %0.000060 |
-| 3 | 48 m | 48 m | %0.000079 |
-| 4 | 64 m | 64 m | %0.000060 |
-| 5 | 80 m | 80 m | %0.000048 |
+| Tuş | Eğri | Beklenen pencere mesafesi | Ölçülen | En kötü sapma |
+|---|---|---|---|---|
+| 1 | Flat | 16 m | 16 m | %0.000060 |
+| 2 | Smooth | 32 m | 32 m | %0.000060 |
+| 3 | Punch | 48 m | 48 m | %0.000056 |
+| 4 | Two-step | 64 m | 64 m | %0.000042 |
+| 5 | Surge | 80 m | 80 m | %0.000038 |
 
 Hedef %1 idi; en kötü sapma bunun dört kat altında bir büyüklük mertebesinde.
 
-`buff_rules.csv` — hepsi PASS:
+`buff_rules.csv` — dokuzu da PASS:
 
 1. Pencere açıkken gelen istek yok sayılıyor (seviye değişmiyor, enerji harcanmıyor,
    pencere mesafesi bozulmuyor)
@@ -279,7 +324,11 @@ Hedef %1 idi; en kötü sapma bunun dört kat altında bir büyüklük mertebesi
 5. 1 tuşu hiç basmamış bir araçla aynı yolu alıyor
 6. Aralık dışı seviyeler 1–5'e kırpılıyor
 7. Bitiş çizgisi geçiş anı alt adım içinde tam (çözülen 4.00417 sn, analitik 4.00417 sn,
-   adım 0.00833 sn)
+   adım 0.00833 sn). Eğri aktifken hız alt adım içinde sabit olmadığından geçiş anı
+   Newton ile çözülüyor
+8. **Beş eğrinin tamamı aynı pencere mesafesini teslim ediyor** — en kötü sapma %0.000103
+9. **Eğriler mesafeyi pencere içinde gerçekten kaydırıyor** — ilk yarıya düşen pay
+   Punch %64.6, Flat %50.0, Surge %36.6
 
 Tuşu basılı tutma `wasPressedThisFrame` ile kaynakta tek istek üretiyor.
 
@@ -289,9 +338,9 @@ Tuşu basılı tutma `wasPressedThisFrame` ile kaynakta tek istek üretiyor.
 
 | Seed | FPS | Süre | Sıra | Buff mesafesi | Sapma |
 |---|---|---|---|---|---|
-| 1337 | 120 / 60 / 30 | 57.028 sn | 1 | 387.597 m | %0.0 |
-| 90210 | 120 / 60 / 30 | 58.328 sn | 4 | 366.796 m | %0.0 |
-| 777013 | 120 / 60 / 30 | 57.252 sn | 1 | 383.998 m | %0.0 |
+| 1337 | 120 / 60 / 30 | 57.074 sn | 1 | 386.963 m | %0.0 |
+| 90210 | 120 / 60 / 30 | 58.289 sn | 4 | 367.476 m | %0.0 |
+| 777013 | 120 / 60 / 30 | 57.253 sn | 1 | 383.999 m | %0.0 |
 
 Sapma yaklaşık değil, tam sıfır. Sebebi: kare süresi bir biriktiriciye ekleniyor ve
 mantık her zaman aynı sabit alt adımla ilerliyor, yani 30 FPS'te kare başına 4, 60'ta 2,
@@ -308,7 +357,7 @@ girdiyle bit düzeyinde aynı.
    ek mesafenin tamamı teslim edilmiş
 2. Aynı alt adımda iki geçiş: önce raporlanan araç 0 iken kazanan araç 1 — çünkü 5.25 ms
    daha erken geçmiş. Liste sırası sonucu belirlemiyor
-3. Peş peşe restart: aynı seed'le iki koşu 57.028 sn / 1. sıra / 387.6 m ile birebir aynı
+3. Peş peşe restart: aynı seed'le iki koşu 57.074 sn / 1. sıra / 386.96 m ile birebir aynı
 
 ### Mesafe–zaman grafiği
 
@@ -332,7 +381,7 @@ Assets/Scripts/
     Configuration/ RaceConfig ve gömülü ayar blokları
     Race/          RaceLoop (düz sınıf, yarışın tamamı) + RaceManager (sahne cephesi)
     Cars/          Car cephesi, CarMotion, CarVisual
-    Boost/         BoostController ve ekonomi yardımcıları
+    Boost/         BoostController, teslimat eğrileri ve ekonomi yardımcıları
     Ai/            AiDriver, hava sahası kapısı
     Balancing/     RubberBandBalancer
     Standings/     sıralama ve bitiş sırası
@@ -344,8 +393,9 @@ Assets/Scripts/
 
 Sorumluluklar dar arayüzlerle ayrılmış: `ICar` mantık, `ICarView` sunum, `IBoostController`
 komut, `IBoostState` sorgu, `IBoostClock` zaman, `IBoostLedger` sayaç. Bir hatayı ararken
-bakılacak yer tek: mesafe `CarMotion.Integrate`, pencere `BoostController`, karar
-`AiDriver.Choose`, dengeleme `RubberBandBalancer.Target`, sıra `StandingsManager.Compare`.
+bakılacak yer tek: mesafe `CarMotion.Integrate`, eğri `BoostCurves`, pencere
+`BoostController`, karar `AiDriver.Choose`, dengeleme `RubberBandBalancer.Target`,
+sıra `StandingsManager.Compare`.
 
 Yarışın kendisi `RaceLoop` adında düz bir sınıf; sahne onu MonoBehaviour cephesiyle,
 doğrulama koşuları da aynı sınıfı GameObject olmadan sürüyor.

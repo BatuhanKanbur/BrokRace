@@ -76,7 +76,8 @@ namespace Game.UI.Views
                 energyText.text = energy.ToString();
             }
             if (boost.IsActive)
-                boostText.text = string.Format(ActiveBoostFormat, boost.ActiveLevel, boost.RemainingWindow);
+                boostText.text = string.Format(ActiveBoostFormat, boost.ActiveLevel,
+                    BoostCurves.Describe(boost.Curve), boost.RemainingWindow);
             else if (_shownLevel != 0)
                 boostText.text = ReadyLabel;
             if (boost.ActiveLevel != _shownLevel)

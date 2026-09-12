@@ -9,5 +9,9 @@ namespace Game.Boost.Constants
         public const int LevelSpan = MaxLevel - MinLevel;
         public const float WindowEpsilon = 1e-5f;
         public const float EnergyTolerance = 1e-2f;
+        public const float Tau = 6.2831853f;
+        public const float NeutralBias = 0.5f;
+        public const float HalfWindow = 0.5f;
+        public const int CrossingRefinements = 3;
     }
 }

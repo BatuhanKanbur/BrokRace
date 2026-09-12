@@ -12,6 +12,7 @@ namespace Game.Cars.Constants
         public const float NoCrossing = -1f;
         public const float TrailWidth = 0.32f;
         public const float TrailDuration = 0.16f;
+        public const float TrailFloor = 0.18f;
         public const float EmissionRiseSpeed = 12f;
         public const float EmissionFadeSpeed = 3.5f;
         public const float EmissionPeak = 5f;

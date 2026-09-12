@@ -12,6 +12,7 @@ namespace Game.Cars.Interfaces
         public float BaseDistance { get; }
         public float BoostDistance { get; }
         public float AssistDistance { get; }
+        public float Intensity { get; }
         public void Configure(float naturalSpeed, float finishDistance);
         public MotionStep Advance(float stepTime);
         public void SetBalanceScale(float scale);
