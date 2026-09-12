@@ -8,5 +8,9 @@ namespace Game.Camera.Constants
         public const float PositionLerp = 6f;
         public const float RotationLerp = 7f;
         public const float SpeedPullback = 0.09f;
+        public const float BaseFieldOfView = 60f;
+        public const float MaxFieldOfView = 86f;
+        public const float FieldOfViewPerSpeed = 0.55f;
+        public const float FieldOfViewLerp = 3.5f;
     }
 }

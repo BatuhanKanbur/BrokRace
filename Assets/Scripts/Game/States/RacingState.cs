@@ -16,7 +16,7 @@ namespace Game.States
         [Inject] private IRaceManager _race;
         [Inject] private IUIManager _uiManager;
 
-        private readonly IDebugInput _debugInput = new DebugToggleInput();
+        private readonly IMenuInput _menuInput = new MenuInput();
         private readonly int _seed;
         private readonly IBoostInputSource _input;
         private RaceHudView _hud;
@@ -40,7 +40,7 @@ namespace Game.States
         public override void Tick()
         {
             var frameTime = Time.deltaTime;
-            if (_debugInput.ConsumeToggle()) _overlay.Toggle();
+            if (_menuInput.ConsumeOverlayToggle()) _overlay.Toggle();
             _race.Tick(frameTime);
             _race.Present(frameTime);
             var player = _race.State.Player;

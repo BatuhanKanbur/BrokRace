@@ -9,6 +9,7 @@ namespace Editor.Constants
         public const string MatrixFile = "race_matrix.csv";
         public const string RivalFile = "race_cars.csv";
         public const string FrameFile = "frame_rate.csv";
+        public const string LifecycleFile = "lifecycle.csv";
         public const string NumberFormat = "0.###";
         public const string PercentFormat = "0.######";
         public const string PassLabel = "PASS";

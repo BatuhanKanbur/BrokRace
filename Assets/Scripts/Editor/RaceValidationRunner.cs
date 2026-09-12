@@ -32,6 +32,7 @@ namespace Editor
             WriteBoostContract(config, output);
             WriteRaceMatrix(config, output);
             WriteFrameRateTable(config, output);
+            WriteLifecycle(config, output);
             Debug.Log($"[RaceValidationRunner] written to {output} DONE");
         }
 
@@ -113,6 +114,16 @@ namespace Editor
                 }
             }
             File.WriteAllText(Path.Combine(output, FrameFile), builder.ToString());
+        }
+
+        private static void WriteLifecycle(RaceConfig config, string output)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine(RuleHeader);
+            foreach (var check in LifecycleProbe.Verify(config, Seeds[0]))
+                builder.Append(check.Name).Append(',').Append(check.Passed ? PassLabel : FailLabel).Append(',')
+                    .AppendLine(check.Detail);
+            File.WriteAllText(Path.Combine(output, LifecycleFile), builder.ToString());
         }
 
         private static void AppendSummary(StringBuilder builder, RaceReport report)

@@ -10,5 +10,9 @@ namespace Game.Simulation.Constants
         public const float CrossingSeconds = 4f;
         public const float CrossingOverrun = 1.5f;
         public const float CrossingTolerance = 1e-3f;
+        public const float NoCrossingTime = -1f;
+        public const float SameStepSpeedRatio = 1.35f;
+        public const float EarlyCrossFraction = 0.18f;
+        public const float LateCrossFraction = 0.81f;
     }
 }

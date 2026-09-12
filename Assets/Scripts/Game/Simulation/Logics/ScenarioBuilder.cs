@@ -14,12 +14,12 @@ namespace Game.Simulation.Logics
             scenario switch
             {
                 NoBoostScenario => new ScriptedBoostEvent[0],
-                MaxSpamScenario => Spam(config, MaxLevel),
+                MaxSpamScenario => Spam(MaxLevel),
                 EarlyThenPassiveScenario => EarlyBurst(config),
                 _ => Balanced(config, seed)
             };
 
-        private static IReadOnlyList<ScriptedBoostEvent> Spam(RaceConfig config, int level)
+        private static IReadOnlyList<ScriptedBoostEvent> Spam(int level)
         {
             var events = new List<ScriptedBoostEvent>();
             for (var time = 0f; time < MaxRaceSeconds; time += SpamInterval)

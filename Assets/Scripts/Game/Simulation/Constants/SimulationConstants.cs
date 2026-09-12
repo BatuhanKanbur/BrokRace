@@ -4,7 +4,6 @@ namespace Game.Simulation.Constants
     {
         public const float MaxRaceSeconds = 300f;
         public const float SpamInterval = 0.1f;
-        public const float ActiveLookahead = 1.4f;
         public const float EarlyAttackProgress = 0.25f;
         public const float EfficientShare = 0.55f;
         public const float MidShare = 0.85f;

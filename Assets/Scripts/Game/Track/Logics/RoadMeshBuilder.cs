@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 using static Game.Track.Constants.TrackConstants;
 
 namespace Game.Track.Logics
@@ -9,9 +10,9 @@ namespace Game.Track.Logics
         public static Mesh Build(IReadOnlyList<Vector3> centre, float width)
         {
             var half = width * 0.5f;
-            var vertices = new List<Vector3>(centre.Count * 4);
-            var uvs = new List<Vector2>(centre.Count * 4);
-            var triangles = new List<int>(centre.Count * 18);
+            var vertices = new List<Vector3>(centre.Count * VertsPerSection);
+            var uvs = new List<Vector2>(centre.Count * VertsPerSection);
+            var triangles = new List<int>(centre.Count * IndicesPerSection);
             var travelled = 0f;
 
             for (var index = 0; index < centre.Count; index++)
@@ -28,21 +29,22 @@ namespace Game.Track.Logics
                 vertices.Add(centre[index] + right * (half + ShoulderWidth) + drop);
 
                 var v = travelled / width;
-                uvs.Add(new Vector2(-ShoulderWidth / width, v));
+                var shoulderU = ShoulderWidth / width;
+                uvs.Add(new Vector2(-shoulderU, v));
                 uvs.Add(new Vector2(0f, v));
                 uvs.Add(new Vector2(1f, v));
-                uvs.Add(new Vector2(1f + ShoulderWidth / width, v));
+                uvs.Add(new Vector2(1f + shoulderU, v));
             }
 
             for (var index = 0; index < centre.Count - 1; index++)
             {
-                var row = index * 4;
-                for (var strip = 0; strip < 3; strip++)
+                var row = index * VertsPerSection;
+                for (var strip = 0; strip < StripsPerSection; strip++)
                 {
                     var a = row + strip;
                     var b = a + 1;
-                    var c = a + 4;
-                    var d = b + 4;
+                    var c = a + VertsPerSection;
+                    var d = b + VertsPerSection;
                     triangles.Add(a);
                     triangles.Add(c);
                     triangles.Add(b);
@@ -52,7 +54,7 @@ namespace Game.Track.Logics
                 }
             }
 
-            var mesh = new Mesh { name = "RaceRoad", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+            var mesh = new Mesh { name = RoadMeshName, indexFormat = IndexFormat.UInt32 };
             mesh.SetVertices(vertices);
             mesh.SetUVs(0, uvs);
             mesh.SetTriangles(triangles, 0);

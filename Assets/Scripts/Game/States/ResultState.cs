@@ -2,6 +2,7 @@ using Core.DI.Attributes;
 using Core.UI.Interfaces;
 using Game.Configuration.Interfaces;
 using Game.Input.Interfaces;
+using Game.Input.Managers;
 using Game.Manager.Interfaces;
 using Game.Race.Interfaces;
 using Game.Telemetry.Interfaces;
@@ -18,6 +19,7 @@ namespace Game.States
         [Inject] private ITelemetryWriter _writer;
         [Inject] private IRaceConfigService _configService;
 
+        private readonly IMenuInput _menuInput = new MenuInput();
         private readonly int _seed;
         private readonly IBoostInputSource _input;
         private ResultView _view;
@@ -38,7 +40,11 @@ namespace Game.States
             _writer.Write(_race.Log, report, $"{LiveRunPrefix}_{_seed}");
         }
 
-        public override void Tick() => _race.Present(Time.deltaTime);
+        public override void Tick()
+        {
+            _race.Present(Time.deltaTime);
+            if (_menuInput.ConsumeRestart()) HandleRestart();
+        }
 
         public override void Exit()
         {

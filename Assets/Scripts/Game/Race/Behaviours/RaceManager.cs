@@ -57,7 +57,7 @@ namespace Game.Race.Behaviours
             await _trackBuilder.Build(_config.track);
             var cars = await SpawnGrid();
             _loop.Register(cars, BuildLaneOffsets(cars.Count));
-            _camera.Follow(_views[PlayerIndex].Transform);
+            _camera.Follow(_views[PlayerIndex].Transform, _config.race.baseSpeed);
         }
 
         public void Prepare(int seed, IBoostInputSource input)

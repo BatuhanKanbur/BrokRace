@@ -25,8 +25,11 @@ namespace Game.UI.Constants
         public const string AcceptedFormat = "BOOST x{0}";
         public const float MillisPerSecond = 1000f;
         public const float FeedbackFadeDuration = 0.7f;
+        public const float RankPulseDuration = 0.45f;
+        public const float RankPulseScale = 1.18f;
         public const float OverlayFadeDuration = 0.15f;
         public const Key ToggleOverlayKey = Key.F1;
+        public const Key RestartKey = Key.R;
         public static readonly Color ReadyColor = new(0.85f, 0.9f, 0.95f, 0.9f);
         public static readonly Color BlockedColor = new(0.35f, 0.35f, 0.4f, 0.55f);
         public static readonly Color RejectColor = new(1f, 0.35f, 0.3f);

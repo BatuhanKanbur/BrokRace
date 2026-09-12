@@ -10,5 +10,9 @@ namespace Game.Track.Constants
         public const float DecorSpacing = 34f;
         public const float DecorSideMargin = 1.6f;
         public const float StartLineOffset = 6f;
+        public const int VertsPerSection = 4;
+        public const int StripsPerSection = 3;
+        public const int IndicesPerSection = 18;
+        public const string RoadMeshName = "RaceRoad";
     }
 }
