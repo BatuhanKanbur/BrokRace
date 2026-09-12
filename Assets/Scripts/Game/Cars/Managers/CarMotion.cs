@@ -16,6 +16,7 @@ namespace Game.Cars.Managers
         public float Distance { get; private set; }
         public float Speed { get; private set; }
         public float BalanceScale { get; private set; } = 1f;
+        public float BoostDistance { get; private set; }
         public float BaseSpeed => _naturalSpeed * BalanceScale;
 
         public CarMotion(IBoostState boost, IBoostClock clock, float naturalSpeed, float finishDistance)
@@ -33,7 +34,11 @@ namespace Game.Cars.Managers
             var travelled = 0f;
             var boosted = _boost.IsActive ? Mathf.Min(stepTime, _boost.RemainingWindow) : 0f;
             if (boosted > 0f)
-                travelled += Integrate(BaseSpeed * _boost.Multiplier, boosted, 0f, ref crossOffset);
+            {
+                var multiplier = _boost.Multiplier;
+                travelled += Integrate(BaseSpeed * multiplier, boosted, 0f, ref crossOffset);
+                BoostDistance += BaseSpeed * (multiplier - 1f) * boosted;
+            }
             var plain = stepTime - boosted;
             if (plain > 0f)
                 travelled += Integrate(BaseSpeed, plain, boosted, ref crossOffset);
@@ -48,6 +53,7 @@ namespace Game.Cars.Managers
             Distance = 0f;
             Speed = _naturalSpeed;
             BalanceScale = 1f;
+            BoostDistance = 0f;
         }
 
         private float Integrate(float speed, float slice, float sliceStart, ref float crossOffset)

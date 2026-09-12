@@ -7,7 +7,7 @@ namespace Game.Boost.Interfaces
     {
         public event Action<int> OnBoostStarted;
         public event Action OnBoostEnded;
-        public event Action<BoostRequestOutcome> OnRequestRejected;
+        public event Action<int, BoostRequestOutcome> OnRequestRejected;
         public BoostRequestOutcome Request(int level);
     }
 }

@@ -8,6 +8,7 @@ namespace Game.Cars.Interfaces
         public float Speed { get; }
         public float BaseSpeed { get; }
         public float BalanceScale { get; }
+        public float BoostDistance { get; }
         public MotionStep Advance(float stepTime);
         public void SetBalanceScale(float scale);
         public void Reset();

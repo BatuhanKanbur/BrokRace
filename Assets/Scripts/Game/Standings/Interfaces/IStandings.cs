@@ -8,7 +8,6 @@ namespace Game.Standings.Interfaces
     {
         public event Action<ICarProgress, int> OnRankChanged;
         public event Action<ICarProgress> OnCarFinished;
-        public event Action OnAllFinished;
         public void Register(IReadOnlyList<ICar> cars);
         public void Refresh();
         public void ReportFinish(ICar car, float crossTime);

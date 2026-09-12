@@ -29,6 +29,7 @@ namespace Game.Cars.Behaviours
 
         public event Action<ICar, float> OnCrossedFinish;
 
+        public Transform Transform => transform;
         public int Index { get; private set; }
         public string DisplayName { get; private set; }
         public bool IsPlayer { get; private set; }
@@ -36,6 +37,7 @@ namespace Game.Cars.Behaviours
         public float Speed => _motion.Speed;
         public float BaseSpeed => _motion.BaseSpeed;
         public float BalanceScale => _motion.BalanceScale;
+        public float BoostDistance => _motion.BoostDistance;
         public bool HasFinished { get; private set; }
         public int FinishOrder { get; private set; }
         public float FinishTime { get; private set; }

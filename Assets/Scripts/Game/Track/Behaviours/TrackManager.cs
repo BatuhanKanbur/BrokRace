@@ -1,4 +1,3 @@
-using Core.DI.Managers;
 using Cysharp.Threading.Tasks;
 using Game.Configuration.Structure;
 using Game.Track.Interfaces;
@@ -22,12 +21,7 @@ namespace Game.Track.Behaviours
 
         public float Length => _path.Length;
 
-        private void Awake()
-        {
-            _decor = new TrackDecorator(decorRoot);
-            DiContainer.Register<ITrackPath>(this);
-            DiContainer.Register<ITrackBuilder>(this);
-        }
+        private void Awake() => _decor = new TrackDecorator(decorRoot);
 
         public async UniTask Build(TrackSettings settings)
         {

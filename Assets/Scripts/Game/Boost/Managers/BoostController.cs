@@ -19,7 +19,7 @@ namespace Game.Boost.Managers
 
         public event Action<int> OnBoostStarted;
         public event Action OnBoostEnded;
-        public event Action<BoostRequestOutcome> OnRequestRejected;
+        public event Action<int, BoostRequestOutcome> OnRequestRejected;
 
         public bool IsActive => _activeLevel > 0;
         public int ActiveLevel => _activeLevel;
@@ -30,6 +30,7 @@ namespace Game.Boost.Managers
         public float EnergyRatio => _energy / _settings.energyCapacity;
         public int AcceptedCount { get; private set; }
         public int RejectedCount { get; private set; }
+        public int ExtraLevelSum { get; private set; }
         public float EnergySpent { get; private set; }
         public float BoostedSeconds { get; private set; }
 
@@ -57,13 +58,14 @@ namespace Game.Boost.Managers
             if (outcome != BoostRequestOutcome.Accepted)
             {
                 RejectedCount++;
-                OnRequestRejected?.Invoke(outcome);
+                OnRequestRejected?.Invoke(level, outcome);
                 return outcome;
             }
             var cost = CostOf(level);
             _energy -= cost;
             EnergySpent += cost;
             AcceptedCount++;
+            ExtraLevelSum += level - NeutralLevel;
             _activeLevel = level;
             _remainingWindow = _settings.windowDuration;
             OnBoostStarted?.Invoke(level);
@@ -97,6 +99,7 @@ namespace Game.Boost.Managers
             _isOpen = false;
             AcceptedCount = 0;
             RejectedCount = 0;
+            ExtraLevelSum = 0;
             EnergySpent = 0f;
             BoostedSeconds = 0f;
         }

@@ -13,7 +13,6 @@ namespace Game.Standings.Managers
 
         public event Action<ICarProgress, int> OnRankChanged;
         public event Action<ICarProgress> OnCarFinished;
-        public event Action OnAllFinished;
 
         public IReadOnlyList<ICarProgress> Order => _view;
         public ICarProgress Leader => _sorted[0];
@@ -47,9 +46,6 @@ namespace Game.Standings.Managers
             FinishedCount++;
             car.MarkFinished(FinishedCount, crossTime);
             OnCarFinished?.Invoke(car);
-            if (FinishedCount < _sorted.Count) return;
-            Refresh();
-            OnAllFinished?.Invoke();
         }
 
         public int RankOf(ICarProgress car) => _ranks[car];
