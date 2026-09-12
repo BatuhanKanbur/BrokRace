@@ -13,7 +13,7 @@ using static Game.Cars.Constants.CarConstants;
 
 namespace Game.Cars.Behaviours
 {
-    public class Car : BaseMonoBehaviour, ICar
+    public class Car : BaseMonoBehaviour, ICar, ICarView
     {
         [SerializeField] private PaintSlot[] paintSlots;
         [SerializeField] private Transform[] wheels;

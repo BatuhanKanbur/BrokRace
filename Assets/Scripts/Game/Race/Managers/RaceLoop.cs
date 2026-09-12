@@ -114,6 +114,8 @@ namespace Game.Race.Managers
             _telemetry.Begin(BuildRunInfo());
         }
 
+        public void PollInput() => _input.Poll();
+
         public void PumpInput()
         {
             _input.Poll();

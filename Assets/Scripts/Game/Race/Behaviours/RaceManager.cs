@@ -74,6 +74,7 @@ namespace Game.Race.Behaviours
 
         public void Tick(float frameTime)
         {
+            _loop.PollInput();
             _accumulator += Mathf.Min(frameTime, _config.race.maxFrameTime);
             var step = _loop.LogicStep;
             while (_accumulator >= step && _loop.IsRunning)

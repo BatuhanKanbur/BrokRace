@@ -106,6 +106,7 @@ namespace Game.Cars.Managers
             foreach (var slot in _paintSlots)
             {
                 slot.targetRenderer.GetPropertyBlock(_block, slot.materialIndex);
+                _block.SetTexture(BaseMapProp, Texture2D.whiteTexture);
                 _block.SetColor(BaseColorProp, _paint);
                 _block.SetColor(EmissionColorProp, emission);
                 slot.targetRenderer.SetPropertyBlock(_block, slot.materialIndex);

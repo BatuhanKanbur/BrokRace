@@ -39,7 +39,7 @@ MonoBehaviour:
     - {x: 240, y: 0, z: 1300}
     - {x: 300, y: 0, z: 1460}
     roadMaterial:
-      m_AssetGUID: 5530463f53b9bb846b2332b03e080874
+      m_AssetGUID: 6662e46d466fe6d4ba6cdea34e89be3b
       m_SubObjectName: 
       m_SubObjectType: 
       m_SubObjectGUID: 

@@ -23,6 +23,7 @@ namespace Game.Race.Interfaces
         public void Register(IReadOnlyList<ICar> cars, float[] laneOffsets);
         public void Prepare(int seed, IBoostInputSource input);
         public void Begin();
+        public void PollInput();
         public void PumpInput();
         public void Step(float stepTime);
         public void Conclude();

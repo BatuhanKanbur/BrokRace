@@ -92,6 +92,7 @@ namespace Game.Boost.Managers
 
         public void Tick(float stepTime)
         {
+            if (!_isOpen) return;
             var gained = _settings.energyRegenPerSecond * stepTime;
             var headroom = _settings.energyCapacity - _energy;
             if (gained > headroom) EnergyWasted += gained - headroom;

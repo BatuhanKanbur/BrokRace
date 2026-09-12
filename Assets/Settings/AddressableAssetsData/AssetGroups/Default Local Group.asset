@@ -55,6 +55,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 6662e46d466fe6d4ba6cdea34e89be3b
+    m_Address: Road_Material
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 73d887949bb118a42896b660b3816710
     m_Address: Decor_Barrier_Wheel_01
     m_ReadOnly: 0
