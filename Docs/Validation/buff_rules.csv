@@ -1,0 +1,8 @@
+rule,result,detail
+request during an active window is ignored,PASS,outcome=WindowActive levelHeld=True extra=32m expected=32m
+cooldown rejects without cost,PASS,duringCooldown=OnCooldown afterCooldown=Accepted
+insufficient energy rejects without cost,PASS,outcome=InsufficientEnergy energy=0 spent=0
+countdown and post finish reject,PASS,beforeStart=NotRunning afterFinish=NotRunning
+level 1 is the reference level,PASS,window=16m coasting=16m extra=0m
+out of range levels clamp to 1..5,PASS,above=True below=True
+finish crossing time is sub step exact,PASS,crossings=1 solved=4.00417s exact=4.00417s step=0.00833s

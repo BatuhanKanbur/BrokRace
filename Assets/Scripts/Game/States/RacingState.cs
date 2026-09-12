@@ -14,7 +14,6 @@ namespace Game.States
     public class RacingState : RaceState
     {
         [Inject] private IRaceManager _race;
-        [Inject] private IRaceState _raceState;
         [Inject] private IUIManager _uiManager;
 
         private readonly IDebugInput _debugInput = new DebugToggleInput();
@@ -44,10 +43,10 @@ namespace Game.States
             if (_debugInput.ConsumeToggle()) _overlay.Toggle();
             _race.Tick(frameTime);
             _race.Present(frameTime);
-            var player = _raceState.Player;
-            _hud.Refresh(player.BoostState, _race.Order.RankOf(player), _raceState.Cars.Count,
-                player.Speed, player.Distance, _raceState.RaceDistance);
-            _overlay.Refresh(_raceState, _race.Order, _race.Log, _race.Balancer.IsSuspended);
+            var player = _race.State.Player;
+            _hud.Refresh(player.BoostState, _race.Order.RankOf(player), _race.State.Cars.Count,
+                player.Speed, player.Distance, _race.State.RaceDistance);
+            _overlay.Refresh(_race.State, _race.Order, _race.Log, _race.Balancer.IsSuspended);
             if (_race.HasCompleted)
                 GameManager.ChangeState(new ResultState(GameManager, _seed, _input));
         }

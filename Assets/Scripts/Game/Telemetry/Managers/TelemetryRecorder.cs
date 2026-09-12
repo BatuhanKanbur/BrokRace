@@ -28,6 +28,7 @@ namespace Game.Telemetry.Managers
         private float _spreadSum;
         private float _spreadMax;
         private float _spreadLast;
+        private float _winnerSpread;
         private int _spreadCount;
         private int _overtakesMade;
         private int _overtakesConceded;
@@ -79,14 +80,20 @@ namespace Game.Telemetry.Managers
             detail = outcome.ToString()
         });
 
-        public void RecordFinish(ICarProgress car) => _events.Add(new RaceEvent
+        public void RecordFinish(ICarProgress car)
+        {
+            if (car.FinishOrder == 1) _winnerSpread = CurrentSpread();
+            _events.Add(BuildFinish(car));
+        }
+
+        private RaceEvent BuildFinish(ICarProgress car) => new()
         {
             time = car.FinishTime,
             carIndex = car.Index,
             kind = Finish,
             level = car.FinishOrder,
             detail = car.FinishTime.ToString(TimeFormat)
-        });
+        };
 
         public RaceReport Complete()
         {
@@ -107,7 +114,8 @@ namespace Game.Telemetry.Managers
                 playerAssistDistance = player.AssistDistance,
                 averagePackSpread = _spreadCount > 0 ? _spreadSum / _spreadCount : 0f,
                 maxPackSpread = _spreadMax,
-                packSpreadAtFinish = _spreadLast
+                packSpreadAtFinish = _spreadLast,
+                packSpreadAtWinnerFinish = _winnerSpread
             };
             FillGapStatistics(report);
             return report;
@@ -123,6 +131,7 @@ namespace Game.Telemetry.Managers
             _spreadSum = 0f;
             _spreadMax = 0f;
             _spreadLast = 0f;
+            _winnerSpread = 0f;
             _spreadCount = 0;
             _overtakesMade = 0;
             _overtakesConceded = 0;
@@ -203,7 +212,7 @@ namespace Game.Telemetry.Managers
             _lastLeaderIndex = leader;
         }
 
-        private void TrackSpread()
+        private float CurrentSpread()
         {
             var front = float.MinValue;
             var back = float.MaxValue;
@@ -213,7 +222,12 @@ namespace Game.Telemetry.Managers
                 front = Mathf.Max(front, reached);
                 back = Mathf.Min(back, reached);
             }
-            _spreadLast = front - back;
+            return front - back;
+        }
+
+        private void TrackSpread()
+        {
+            _spreadLast = CurrentSpread();
             _spreadSum += _spreadLast;
             _spreadMax = Mathf.Max(_spreadMax, _spreadLast);
             _spreadCount++;

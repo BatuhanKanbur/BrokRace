@@ -11,7 +11,7 @@ using Game.Configuration.Structure;
 using Game.Manager.Interfaces;
 using Game.Manager.Managers;
 using Game.Race.Interfaces;
-using Game.Race.Managers;
+using Game.Race.Behaviours;
 using Game.States;
 using Game.Telemetry.Interfaces;
 using Game.Telemetry.Logics;
@@ -44,7 +44,6 @@ namespace Game.Boot
             DiContainer.Register<ITrackBuilder>(trackManager);
             DiContainer.Register<IRaceCamera>(raceCamera);
             DiContainer.Register<IRaceManager>(raceManager);
-            DiContainer.Register<IRaceState>(raceManager);
             DiContainer.Register<IGameManager>(gameManager);
             foreach (var view in views)
                 uiManager.RegisterView(view);

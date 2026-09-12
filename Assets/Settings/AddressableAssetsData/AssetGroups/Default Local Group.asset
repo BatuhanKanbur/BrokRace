@@ -14,7 +14,87 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
   m_GroupName: Default Local Group
   m_GUID: 550423028b3897f4387654dc791f4d8e
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 2a0459182c075894091699b32c6b69f1
+    m_Address: Car_Player
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3b0114fe920c85c4ca5f0e55bcf6429e
+    m_Address: Car_Rival_1
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3cab2070726e65e4c8f7da05a4351a0a
+    m_Address: Decor_Flag_01
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 48f8bcf9af8e4444a8603150a89c7890
+    m_Address: Car_Rival_2
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4e8f12c486b79904ca2bed03d10911e1
+    m_Address: Car_Rival_4
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 509cfa59e061706428a74ee6eb342463
+    m_Address: Finish_Gate
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5530463f53b9bb846b2332b03e080874
+    m_Address: Road_Material
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5627e2447c1c4f346b37adcb06ab0d76
+    m_Address: Car_Rival_5
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 73d887949bb118a42896b660b3816710
+    m_Address: Decor_Barrier_Wheel_01
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 76042316f622af6418bd764fd7f24774
+    m_Address: Decor_Cone_01
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 81fc8bc275b3bd9439cb09faf1311cdc
+    m_Address: Car_Rival_3
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8c0bd81a279e0694caeb46cda32a61b8
+    m_Address: Car_Rival_7
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d841e320df238ea44adb370a1dfc6a54
+    m_Address: Decor_Barrier_01
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e15ae4b7f98ed7f4686703b9141af3a2
+    m_Address: Decor_Arrow_01
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: efcde3515228dad4a88ebd35b3da5609
+    m_Address: RaceConfig
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: fc4d9cb15546cf54a9ba5d9b5e5c69b5
+    m_Address: Car_Rival_6
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 4c58bdc75957b3441b77f1600920c43a, type: 2}
   m_SchemaSet:

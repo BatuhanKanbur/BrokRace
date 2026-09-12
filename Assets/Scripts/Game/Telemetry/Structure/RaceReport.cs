@@ -18,6 +18,7 @@ namespace Game.Telemetry.Structure
         public float averageGapBehindLastFifth;
         public float averageGapToLeaderLastFifth;
         public float packSpreadAtFinish;
+        public float packSpreadAtWinnerFinish;
         public float averagePackSpread;
         public float maxPackSpread;
         public int leadChanges;

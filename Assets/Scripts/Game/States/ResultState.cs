@@ -14,7 +14,6 @@ namespace Game.States
     public class ResultState : RaceState
     {
         [Inject] private IRaceManager _race;
-        [Inject] private IRaceState _raceState;
         [Inject] private IUIManager _uiManager;
         [Inject] private ITelemetryWriter _writer;
         [Inject] private IRaceConfigService _configService;
@@ -32,7 +31,7 @@ namespace Game.States
         public override void Enter()
         {
             _view = _uiManager.GetView<ResultView>();
-            _view.ShowResults(_race.Order.Order, _raceState.Player);
+            _view.ShowResults(_race.Order.Order, _race.State.Player);
             _view.OnRestartClicked += HandleRestart;
             _uiManager.Show<ResultView>();
             var report = _race.BuildReport(LiveRunPrefix, Application.targetFrameRate);

@@ -72,7 +72,7 @@ namespace Game.Simulation.Logics
             var distanceHeld = Mathf.Abs(motion.BoostDistance - expected) < expected * DistanceTolerance;
             return new RuleCheck("request during an active window is ignored",
                 outcome == BoostRequestOutcome.WindowActive && levelHeld && energyUntouched && distanceHeld,
-                $"outcome={outcome} level={boost.ActiveLevel} extra={motion.BoostDistance:0.###}m expected={expected:0.###}m");
+                $"outcome={outcome} levelHeld={levelHeld} extra={motion.BoostDistance:0.###}m expected={expected:0.###}m");
         }
 
         private static RuleCheck CooldownRejectsWithoutCost(BoostSettings settings, float baseSpeed, float stepTime)
