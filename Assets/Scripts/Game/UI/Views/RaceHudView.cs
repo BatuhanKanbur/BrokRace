@@ -3,9 +3,11 @@ using Core.Utilities;
 using Cysharp.Threading.Tasks;
 using Game.Boost.Enums;
 using Game.Boost.Interfaces;
-using Game.Utilities;
+using Game.Boost.Logics;
+using Game.Configuration.Structure;
 using UnityEngine;
 using UnityEngine.UI;
+using static Game.Boost.Constants.BoostConstants;
 using static Game.UI.Constants.HudConstants;
 
 namespace Game.UI.Views
@@ -24,24 +26,68 @@ namespace Game.UI.Views
         [SerializeField] private Image[] keySlots;
         [SerializeField] private CanvasGroup feedbackGroup;
 
+        private BoostSettings _settings;
+        private int _shownRank;
+        private int _shownSpeed;
+        private int _shownRemaining;
+        private int _shownEnergy;
+        private int _shownLevel;
+
+        public void Bind(BoostSettings settings)
+        {
+            _settings = settings;
+            _shownRank = 0;
+            _shownSpeed = -1;
+            _shownRemaining = -1;
+            _shownEnergy = -1;
+            _shownLevel = -1;
+        }
+
         public void Refresh(IBoostState boost, int rank, int total, float speed, float travelled, float raceDistance)
         {
-            rankText.text = $"{rank}/{total}";
-            speedText.text = $"{speed:0} m/s";
-            remainingText.text = $"{Mathf.Max(0f, raceDistance - travelled):0} m";
             progressFill.fillAmount = Mathf.Clamp01(travelled / raceDistance);
             energyFill.fillAmount = boost.EnergyRatio;
-            energyText.text = $"{boost.Energy:0}";
-            boostFill.fillAmount = boost.IsActive ? boost.RemainingWindow / BoostWindowReference : 0f;
-            boostFill.color = BoostPalette.ForLevel(boost.ActiveLevel);
-            boostText.text = boost.IsActive ? $"x{boost.ActiveLevel}  {boost.RemainingWindow:0.00}s" : ReadyLabel;
+            boostFill.fillAmount = boost.IsActive ? boost.RemainingWindow / boost.WindowDuration : 0f;
+
+            if (rank != _shownRank)
+            {
+                _shownRank = rank;
+                rankText.text = $"{rank}/{total}";
+            }
+            var roundedSpeed = Mathf.RoundToInt(speed);
+            if (roundedSpeed != _shownSpeed)
+            {
+                _shownSpeed = roundedSpeed;
+                speedText.text = $"{roundedSpeed} m/s";
+            }
+            var remaining = Mathf.RoundToInt(Mathf.Max(0f, raceDistance - travelled));
+            if (remaining != _shownRemaining)
+            {
+                _shownRemaining = remaining;
+                remainingText.text = $"{remaining} m";
+            }
+            var energy = Mathf.FloorToInt(boost.Energy);
+            if (energy != _shownEnergy)
+            {
+                _shownEnergy = energy;
+                energyText.text = energy.ToString();
+            }
+            if (boost.IsActive)
+                boostText.text = $"x{boost.ActiveLevel}  {boost.RemainingWindow:0.00}s";
+            else if (_shownLevel != 0)
+                boostText.text = ReadyLabel;
+            if (boost.ActiveLevel != _shownLevel)
+            {
+                _shownLevel = boost.ActiveLevel;
+                boostFill.color = BoostPalette.ForLevel(_settings, Mathf.Max(_shownLevel, MinLevel));
+            }
             RefreshKeys(boost);
         }
 
         public void FlashAccepted(int level)
         {
             feedbackText.text = $"BOOST x{level}";
-            feedbackText.color = BoostPalette.ForLevel(level);
+            feedbackText.color = BoostPalette.ForLevel(_settings, level);
             Pulse();
         }
 
@@ -56,14 +102,14 @@ namespace Game.UI.Views
         {
             for (var index = 0; index < keySlots.Length; index++)
             {
-                var level = index + 1;
+                var level = index + MinLevel;
                 keySlots[index].color = boost.ActiveLevel == level
-                    ? BoostPalette.ForLevel(level)
-                    : Blocked(boost, level) ? BlockedColor : ReadyColor;
+                    ? BoostPalette.ForLevel(_settings, level)
+                    : IsBlocked(boost, level) ? BlockedColor : ReadyColor;
             }
         }
 
-        private static bool Blocked(IBoostState boost, int level) =>
+        private static bool IsBlocked(IBoostState boost, int level) =>
             boost.IsActive || boost.RemainingCooldown > 0f || !boost.CanAfford(level);
 
         private void Pulse()

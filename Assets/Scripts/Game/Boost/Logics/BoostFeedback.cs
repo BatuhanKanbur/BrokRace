@@ -1,6 +1,6 @@
 using Game.Boost.Enums;
 
-namespace Game.Utilities
+namespace Game.Boost.Logics
 {
     public static class BoostFeedback
     {

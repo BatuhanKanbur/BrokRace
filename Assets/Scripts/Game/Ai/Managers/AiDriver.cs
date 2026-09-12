@@ -1,6 +1,7 @@
 using Core.Utilities;
 using Game.Ai.Interfaces;
-using Game.Boost.Enums;
+using Game.Ai.Structure;
+using Game.Boost.Logics;
 using Game.Cars.Interfaces;
 using Game.Configuration.Structure;
 using Game.Race.Interfaces;
@@ -8,6 +9,7 @@ using Game.Standings.Interfaces;
 using UnityEngine;
 using static Game.Ai.Constants.AiConstants;
 using static Game.Boost.Constants.BoostConstants;
+using static Game.Race.Constants.RaceConstants;
 
 namespace Game.Ai.Managers
 {
@@ -19,17 +21,19 @@ namespace Game.Ai.Managers
         private readonly BoostSettings _economy;
         private readonly IRaceState _race;
         private readonly IRaceOrder _order;
-        private readonly DeterministicRandom _random;
+        private readonly float _stepTime;
+        private readonly int _seed;
+        private readonly float _targetPace;
 
-        private float _countdown;
-        private string _stateLabel = IdleLabel;
+        private int _stepsLeft;
+        private int _decisionIndex;
 
         public int CarIndex => _car.Index;
         public string ProfileName => _profile.name;
-        public string StateLabel => _stateLabel;
+        public AiDecision LastDecision { get; private set; }
 
         public AiDriver(ICar car, AiProfile profile, AiSettings settings, BoostSettings economy,
-            IRaceState race, IRaceOrder order, DeterministicRandom random)
+            IRaceState race, IRaceOrder order, float stepTime, int seed)
         {
             _car = car;
             _profile = profile;
@@ -37,96 +41,105 @@ namespace Game.Ai.Managers
             _economy = economy;
             _race = race;
             _order = order;
-            _random = random;
+            _stepTime = stepTime;
+            _seed = seed;
+            _targetPace = race.RaceDistance / profile.targetFinishTime;
             Reset();
         }
 
-        public void Step(float stepTime)
+        public int Decide()
         {
-            _countdown -= stepTime;
-            if (_countdown > 0f) return;
-            _countdown = NextInterval();
-            Decide();
+            if (--_stepsLeft > 0) return NoDecision;
+            _stepsLeft = IntervalSteps(Jitter());
+            if (_car.BoostState.IsActive || _car.BoostState.RemainingCooldown > 0f) return NoDecision;
+            return Choose();
         }
 
         public void Reset()
         {
-            _countdown = _profile.decisionPhase * _profile.decisionInterval + NextInterval();
-            _stateLabel = IdleLabel;
+            _decisionIndex = 0;
+            _stepsLeft = IntervalSteps(_profile.decisionPhase);
+            LastDecision = default;
         }
 
-        private float NextInterval() =>
-            _profile.decisionInterval * (1f + _profile.decisionJitter * _random.Signed());
+        private int IntervalSteps(float offset) =>
+            Mathf.Max(1, Mathf.RoundToInt(_profile.decisionInterval * (1f + offset) / _stepTime));
 
-        private void Decide()
+        private float Jitter() => _profile.decisionJitter * NoiseAt(_decisionIndex + NoiseSalt);
+
+        private float NoiseAt(int index) =>
+            DeterministicRandom.Stream(_seed, _car.Index * NoiseSalt + index).Signed();
+
+        private int Choose()
         {
-            var chase = ChasePressure();
+            var strike = 0f;
             var defend = DefendPressure();
-            var phase = PhaseUrge(_car.Distance / _race.RaceDistance);
-            var reserve = ReserveUrge();
-            var appetite = _profile.aggression
-                           + _profile.chaseWeight * chase
-                           + _profile.defendWeight * defend
-                           + _profile.attackWindowWeight * phase
-                           + _profile.noise * _random.Signed();
+            var pace = PaceDeficit();
+            var closing = ClosingUrge();
+            var spill = SpillRisk();
+            var noise = NoiseAt(_decisionIndex);
+            _decisionIndex++;
 
-            var bestLevel = 0;
-            var bestScore = _settings.actionThreshold;
-            for (var level = NeutralLevel + 1; level <= Mathf.Min(_profile.levelCap, MaxLevel); level++)
+            var best = NoDecision;
+            var bestScore = _profile.holdBias + _settings.holdSaveWeight * (1f - spill) * (1f - closing);
+            var holdScore = bestScore;
+            var bestStrike = 0f;
+
+            var reserve = _profile.reserveEnergy * (1f - closing);
+            if (_car.Progress >= _settings.burnDownProgress) reserve = 0f;
+
+            for (var level = _settings.minLevel; level <= MaxLevel; level++)
             {
+                if (level > _profile.levelBias + 1 && _car.Progress < _settings.burnDownProgress) continue;
+                var cost = _car.BoostState.CostOf(level);
                 if (!_car.BoostState.CanAfford(level)) continue;
-                var gain = level - NeutralLevel;
-                var cost = _car.BoostState.CostOf(level) / _economy.energyCapacity;
-                var score = appetite * gain - _profile.patience * reserve * cost * _settings.costWeight;
+                if (_car.BoostState.Energy - cost < reserve) continue;
+                strike = StrikePressure(level);
+                var score = _profile.strikeWeight * strike
+                            + _profile.defendWeight * defend
+                            + _profile.paceWeight * pace
+                            + _profile.closeWeight * closing * (level / (float)MaxLevel)
+                            + _profile.spillWeight * spill
+                            + _profile.efficiencyWeight * BoostEconomy.Efficiency(_economy, _car.NaturalSpeed, level, MinLevel + 1)
+                            + _settings.levelFitWeight * (1f - Mathf.Abs(level - _profile.levelBias) / (float)LevelSpan)
+                            + _profile.noiseWeight * noise
+                            - _settings.costWeight * (cost / _car.BoostState.Capacity);
                 if (score <= bestScore) continue;
                 bestScore = score;
-                bestLevel = level;
+                best = level;
+                bestStrike = strike;
             }
 
-            if (bestLevel == 0)
-            {
-                _stateLabel = $"{HoldLabel} c{chase:0.00} d{defend:0.00} p{phase:0.00} e{_car.BoostState.EnergyRatio:0.00}";
-                return;
-            }
-            var outcome = _car.Boost.Request(bestLevel);
-            _stateLabel = outcome == BoostRequestOutcome.Accepted
-                ? $"x{bestLevel} c{chase:0.00} d{defend:0.00} p{phase:0.00}"
-                : $"{outcome} c{chase:0.00} d{defend:0.00} p{phase:0.00}";
+            LastDecision = new AiDecision(best, bestStrike, defend, pace, closing, spill, bestScore, holdScore);
+            return best;
         }
 
-        private float ChasePressure()
+        private float StrikePressure(int level)
         {
             var ahead = _order.CarAhead(_car);
             if (ahead == null) return 0f;
             var gap = ahead.Distance - _car.Distance;
-            if (gap > _profile.strikeRange) return 0f;
-            var pressure = 1f - gap / _profile.strikeRange;
-            return ahead.IsPlayer ? pressure * (1f + _profile.playerFocus) : pressure;
+            var reach = (level - NeutralLevel) * _car.NaturalSpeed * _economy.windowDuration;
+            return Mathf.Max(0f, 1f - Mathf.Abs(gap - reach) / _settings.strikeTolerance);
         }
 
         private float DefendPressure()
         {
             var behind = _order.CarBehind(_car);
-            if (behind == null) return 0f;
-            var gap = _car.Distance - behind.Distance;
-            if (gap > _profile.strikeRange) return 0f;
-            var pressure = 1f - gap / _profile.strikeRange;
-            return behind.IsPlayer ? pressure * (1f + _profile.playerFocus) : pressure;
+            var gap = behind != null ? _car.Distance - behind.Distance : _settings.noNeighbourGap;
+            return Mathf.Max(0f, 1f - gap / _settings.defendRange);
         }
 
-        private float PhaseUrge(float progress)
-        {
-            if (progress >= _profile.attackWindow.x && progress <= _profile.attackWindow.y) return 1f;
-            var outside = progress < _profile.attackWindow.x
-                ? _profile.attackWindow.x - progress
-                : progress - _profile.attackWindow.y;
-            return Mathf.Max(0f, 1f - outside / PhaseFalloff);
-        }
+        private float PaceDeficit() =>
+            Mathf.Clamp01((_targetPace * _race.Time - _car.Distance) / _settings.paceDeficitSpan);
 
-        private float ReserveUrge()
+        private float ClosingUrge() =>
+            Mathf.Clamp01((_car.Progress - _profile.closeFrom) / (1f - _profile.closeFrom));
+
+        private float SpillRisk()
         {
-            var scarcity = Mathf.InverseLerp(1f, _profile.energyFloor, _car.BoostState.EnergyRatio);
-            return BaseReserveUrge + _settings.reserveUrgency * scarcity * scarcity;
+            var threshold = _settings.spillThreshold;
+            return Mathf.Clamp01((_car.BoostState.EnergyRatio - threshold) / (1f - threshold));
         }
     }
 }

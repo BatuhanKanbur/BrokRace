@@ -14,6 +14,8 @@ namespace Game.Input.Managers
 
         public ScriptedBoostInput(IReadOnlyList<ScriptedBoostEvent> schedule) => _schedule = schedule;
 
+        public void Poll() { }
+
         public void Sample(float raceTime)
         {
             while (_cursor < _schedule.Count && _schedule[_cursor].time <= raceTime)

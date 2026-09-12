@@ -20,8 +20,9 @@ namespace Game.Telemetry.Structure
         public float packSpreadAtFinish;
         public float averagePackSpread;
         public float maxPackSpread;
-        public float leadChanges;
-        public float playerBuffDistance;
-        public float playerBaselineDistance;
+        public int leadChanges;
+        public float playerBoostDistance;
+        public float playerExpectedBoostDistance;
+        public float playerAssistDistance;
     }
 }

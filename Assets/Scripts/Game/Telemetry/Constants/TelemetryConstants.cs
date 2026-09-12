@@ -4,7 +4,13 @@ namespace Game.Telemetry.Constants
     {
         public const float OvertakeHysteresis = 2f;
         public const float FinalStretchFraction = 0.8f;
-        public const string SampleHeader = "time,carIndex,name,isPlayer,rank,distance,speed,boostLevel,energy,balanceScale,gapToPlayer,gapToLeader,aiState";
+        public const int SampleLineBudget = 112;
+        public const int EventLineBudget = 72;
+        public const string TimeFormat = "0.###";
+        public const string DistanceFormat = "0.###";
+        public const string EnergyFormat = "0.##";
+        public const string ScaleFormat = "0.####";
+        public const string SampleHeader = "time,carIndex,name,isPlayer,rank,distance,speed,boostLevel,energy,balanceScale,assistDistance,boostDistance,gapToPlayer,gapToLeader,aiState";
         public const string EventHeader = "time,carIndex,name,kind,level,detail";
         public const string SampleFileSuffix = "_samples.csv";
         public const string EventFileSuffix = "_events.csv";

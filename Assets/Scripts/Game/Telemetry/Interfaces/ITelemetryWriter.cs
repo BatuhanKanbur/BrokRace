@@ -1,7 +1,9 @@
+using Game.Telemetry.Structure;
+
 namespace Game.Telemetry.Interfaces
 {
     public interface ITelemetryWriter
     {
-        public string Write(ITelemetryRecorder recorder, string runName, string[] carNames);
+        public string Write(ITelemetryLog log, RaceReport report, string runName);
     }
 }

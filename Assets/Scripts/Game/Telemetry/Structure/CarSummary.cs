@@ -14,7 +14,10 @@ namespace Game.Telemetry.Structure
         public int acceptedBoosts;
         public int rejectedBoosts;
         public float energySpent;
+        public float energyWasted;
         public float boostedSeconds;
+        public float boostDistance;
+        public float assistDistance;
         public float averageSpeed;
     }
 }

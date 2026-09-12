@@ -12,13 +12,15 @@ namespace Game.Simulation.Structure
         public float ExpectedExtra { get; }
         public float MeasuredExtra { get; }
         public float BoostedSeconds { get; }
+        public float TotalDistance { get; }
 
         public float DeviationPercent => ExpectedWindowDistance > 0f
             ? Mathf.Abs(MeasuredWindowDistance - ExpectedWindowDistance) / ExpectedWindowDistance * 100f
             : 0f;
 
         public BoostCheck(int level, float stepTime, float baseSpeed, float expectedWindowDistance,
-            float measuredWindowDistance, float expectedExtra, float measuredExtra, float boostedSeconds)
+            float measuredWindowDistance, float expectedExtra, float measuredExtra, float boostedSeconds,
+            float totalDistance)
         {
             Level = level;
             StepTime = stepTime;
@@ -28,6 +30,7 @@ namespace Game.Simulation.Structure
             ExpectedExtra = expectedExtra;
             MeasuredExtra = measuredExtra;
             BoostedSeconds = boostedSeconds;
+            TotalDistance = totalDistance;
         }
     }
 }

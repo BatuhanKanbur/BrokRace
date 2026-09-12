@@ -1,10 +1,10 @@
 using Core.DI.Attributes;
-using Core.UI.Interfaces;
 using Cysharp.Threading.Tasks;
 using Game.Configuration.Interfaces;
 using Game.Input.Managers;
 using Game.Manager.Interfaces;
 using Game.Race.Interfaces;
+using UnityEngine;
 
 namespace Game.States
 {
@@ -12,7 +12,6 @@ namespace Game.States
     {
         [Inject] private IRaceManager _race;
         [Inject] private IRaceConfigService _configService;
-        [Inject] private IUIManager _uiManager;
 
         public RaceBootState(IGameManager gameManager) : base(gameManager) { }
 
@@ -26,7 +25,7 @@ namespace Game.States
         {
             await _race.Build();
             var settings = _configService.Config.race;
-            var seed = settings.randomizeSeed ? UnityEngine.Random.Range(1, int.MaxValue) : settings.seed;
+            var seed = settings.randomizeSeed ? Random.Range(1, int.MaxValue) : settings.seed;
             GameManager.ChangeState(new CountdownState(GameManager, seed, new KeyboardBoostInput()));
         }
     }

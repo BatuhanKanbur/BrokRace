@@ -5,6 +5,7 @@ using Core.UI.Abstracts;
 using Game.Cars.Interfaces;
 using UnityEngine;
 using UnityEngine.UI;
+using static Game.UI.Constants.HudConstants;
 
 namespace Game.UI.Views
 {
@@ -13,6 +14,8 @@ namespace Game.UI.Views
         [SerializeField] private Text headlineText;
         [SerializeField] private Text tableText;
         [SerializeField] private Button restartButton;
+
+        private readonly StringBuilder _builder = new();
 
         public event Action OnRestartClicked;
 
@@ -24,11 +27,14 @@ namespace Game.UI.Views
 
         public void ShowResults(IReadOnlyList<ICarProgress> order, ICarProgress player)
         {
-            headlineText.text = player.FinishOrder == 1 ? "WINNER" : $"FINISHED {player.FinishOrder}/{order.Count}";
-            var table = new StringBuilder();
+            headlineText.text = player.FinishOrder == 1
+                ? WinnerLabel
+                : string.Format(FinishedFormat, player.FinishOrder, order.Count);
+            _builder.Clear();
             foreach (var car in order)
-                table.AppendLine($"{car.FinishOrder}.  {car.DisplayName,-12} {car.FinishTime:0.00}s");
-            tableText.text = table.ToString();
+                _builder.AppendLine(string.Format(ResultRowFormat, car.FinishOrder, car.DisplayName,
+                    car.FinishTime, car.FinishTime - player.FinishTime));
+            tableText.text = _builder.ToString();
         }
     }
 }

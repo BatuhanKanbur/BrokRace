@@ -26,6 +26,7 @@ namespace Game.Track.Behaviours
         public async UniTask Build(TrackSettings settings)
         {
             _path.Build(settings.shapePoints, settings.raceDistance);
+            if (roadFilter.sharedMesh) Destroy(roadFilter.sharedMesh);
             roadFilter.sharedMesh = RoadMeshBuilder.Build(_path.Points, settings.roadWidth);
             if (!_roadMaterialHandle.IsValid())
                 _roadMaterialHandle = settings.roadMaterial.LoadAssetAsync<Material>();

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Core.UI.Abstracts;
 using Core.UI.Interfaces;
@@ -10,51 +10,22 @@ namespace Core.UI.Managers
     {
         private readonly Dictionary<Type, BaseView> _registeredViews = new();
 
-        public void RegisterView(BaseView view)
-        {
-            if (!view) return;
-            var type = view.GetType();
-            _registeredViews[type] = view;
-        }
+        public void RegisterView(BaseView view) => _registeredViews[view.GetType()] = view;
 
-        public void UnregisterView(BaseView view)
-        {
-            if (!view) return;
-            var type = view.GetType();
-            _registeredViews.Remove(type);
-        }
-
-        public T GetView<T>() where T : BaseView
-        {
-            var type = typeof(T);
-            if (_registeredViews.TryGetValue(type, out var view))
-            {
-                return view as T;
-            }
-            return null;
-        }
+        public T GetView<T>() where T : BaseView => (T)_registeredViews[typeof(T)];
 
         public void Show<T>(bool hideOthers = false) where T : BaseView
         {
-            var targetView = GetView<T>();
-            if (!targetView) return;
-
+            var target = GetView<T>();
             if (hideOthers)
             {
                 foreach (var view in _registeredViews.Values)
-                {
-                    if (view != targetView && view != null) 
-                    {
+                    if (view != target)
                         view.Hide();
-                    }
-                }
             }
-            targetView.Show();
+            target.Show();
         }
 
-        public void ClearAllViews()
-        {
-            _registeredViews.Clear();
-        }
+        public void ClearAllViews() => _registeredViews.Clear();
     }
 }

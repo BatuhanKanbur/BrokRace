@@ -9,8 +9,7 @@ namespace Game.Boost.Managers
 {
     public class BoostController : IBoostController, IBoostState, IBoostClock, IBoostLedger
     {
-        private readonly BoostSettings _settings;
-
+        private BoostSettings _settings;
         private int _activeLevel;
         private float _remainingWindow;
         private float _remainingCooldown;
@@ -24,23 +23,26 @@ namespace Game.Boost.Managers
         public bool IsActive => _activeLevel > 0;
         public int ActiveLevel => _activeLevel;
         public float Multiplier => _activeLevel > 0 ? _activeLevel : NeutralLevel;
+        public float WindowDuration => _settings.windowDuration;
         public float RemainingWindow => _remainingWindow;
         public float RemainingCooldown => _remainingCooldown;
         public float Energy => _energy;
+        public float Capacity => _settings.energyCapacity;
         public float EnergyRatio => _energy / _settings.energyCapacity;
         public int AcceptedCount { get; private set; }
         public int RejectedCount { get; private set; }
         public int ExtraLevelSum { get; private set; }
         public float EnergySpent { get; private set; }
+        public float EnergyWasted { get; private set; }
         public float BoostedSeconds { get; private set; }
 
-        public BoostController(BoostSettings settings)
+        public void Configure(BoostSettings settings)
         {
             _settings = settings;
             Reset();
         }
 
-        public float CostOf(int level) => _settings.levelCosts[Mathf.Clamp(level, MinLevel, MaxLevel) - 1];
+        public float CostOf(int level) => _settings.levelCosts[Clamp(level) - MinLevel];
 
         public bool CanAfford(int level) => _energy >= CostOf(level);
 
@@ -52,8 +54,9 @@ namespace Game.Boost.Managers
             EndWindow();
         }
 
-        public BoostRequestOutcome Request(int level)
+        public BoostRequestOutcome Request(int requestedLevel)
         {
+            var level = Clamp(requestedLevel);
             var outcome = Evaluate(level);
             if (outcome != BoostRequestOutcome.Accepted)
             {
@@ -87,8 +90,13 @@ namespace Game.Boost.Managers
                 _remainingCooldown = Mathf.Max(0f, _remainingCooldown - slice);
         }
 
-        public void Tick(float stepTime) =>
-            _energy = Mathf.Min(_settings.energyCapacity, _energy + _settings.energyRegenPerSecond * stepTime);
+        public void Tick(float stepTime)
+        {
+            var gained = _settings.energyRegenPerSecond * stepTime;
+            var headroom = _settings.energyCapacity - _energy;
+            if (gained > headroom) EnergyWasted += gained - headroom;
+            _energy = Mathf.Min(_settings.energyCapacity, _energy + gained);
+        }
 
         public void Reset()
         {
@@ -101,8 +109,11 @@ namespace Game.Boost.Managers
             RejectedCount = 0;
             ExtraLevelSum = 0;
             EnergySpent = 0f;
+            EnergyWasted = 0f;
             BoostedSeconds = 0f;
         }
+
+        private static int Clamp(int level) => Mathf.Clamp(level, MinLevel, MaxLevel);
 
         private BoostRequestOutcome Evaluate(int level)
         {

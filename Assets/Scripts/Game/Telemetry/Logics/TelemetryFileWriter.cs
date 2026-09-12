@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using Game.Configuration.Structure;
 using Game.Telemetry.Interfaces;
+using Game.Telemetry.Structure;
 using UnityEngine;
 using static Game.Telemetry.Constants.TelemetryConstants;
 
@@ -10,64 +11,62 @@ namespace Game.Telemetry.Logics
 {
     public class TelemetryFileWriter : ITelemetryWriter
     {
+        private static readonly CultureInfo Culture = CultureInfo.InvariantCulture;
+
         private readonly TelemetrySettings _settings;
 
         public TelemetryFileWriter(TelemetrySettings settings) => _settings = settings;
 
-        public string Write(ITelemetryRecorder recorder, string runName, string[] carNames)
+        public string Write(ITelemetryLog log, RaceReport report, string runName)
         {
             var directory = Path.IsPathRooted(_settings.outputDirectory)
                 ? _settings.outputDirectory
                 : Path.Combine(Application.persistentDataPath, _settings.outputDirectory);
             Directory.CreateDirectory(directory);
-
             if (_settings.writeCsv)
             {
-                File.WriteAllText(Path.Combine(directory, runName + SampleFileSuffix), BuildSamples(recorder, carNames));
-                File.WriteAllText(Path.Combine(directory, runName + EventFileSuffix), BuildEvents(recorder, carNames));
+                File.WriteAllText(Path.Combine(directory, runName + SampleFileSuffix), BuildSamples(log));
+                File.WriteAllText(Path.Combine(directory, runName + EventFileSuffix), BuildEvents(log));
             }
             if (_settings.writeJson)
-            {
-                File.WriteAllText(Path.Combine(directory, runName + ReportFileSuffix),
-                    JsonUtility.ToJson(recorder.Complete(), true));
-            }
+                File.WriteAllText(Path.Combine(directory, runName + ReportFileSuffix), JsonUtility.ToJson(report, true));
             return directory;
         }
 
-        private static string BuildSamples(ITelemetryRecorder recorder, string[] carNames)
+        private static string BuildSamples(ITelemetryLog log)
         {
-            var culture = CultureInfo.InvariantCulture;
-            var builder = new StringBuilder(recorder.Samples.Count * 96);
+            var builder = new StringBuilder(log.Samples.Count * SampleLineBudget);
             builder.AppendLine(SampleHeader);
-            foreach (var sample in recorder.Samples)
+            foreach (var sample in log.Samples)
             {
-                builder.Append(sample.time.ToString("0.###", culture)).Append(',')
+                builder.Append(sample.time.ToString(TimeFormat, Culture)).Append(',')
                     .Append(sample.carIndex).Append(',')
-                    .Append(carNames[sample.carIndex]).Append(',')
-                    .Append(sample.carIndex == 0 ? 1 : 0).Append(',')
+                    .Append(log.CarNames[sample.carIndex]).Append(',')
+                    .Append(sample.isPlayer ? 1 : 0).Append(',')
                     .Append(sample.rank).Append(',')
-                    .Append(sample.distance.ToString("0.###", culture)).Append(',')
-                    .Append(sample.speed.ToString("0.###", culture)).Append(',')
+                    .Append(sample.distance.ToString(DistanceFormat, Culture)).Append(',')
+                    .Append(sample.speed.ToString(DistanceFormat, Culture)).Append(',')
                     .Append(sample.boostLevel).Append(',')
-                    .Append(sample.energy.ToString("0.##", culture)).Append(',')
-                    .Append(sample.balanceScale.ToString("0.####", culture)).Append(',')
-                    .Append(sample.gapToPlayer.ToString("0.##", culture)).Append(',')
-                    .Append(sample.gapToLeader.ToString("0.##", culture)).Append(',')
+                    .Append(sample.energy.ToString(EnergyFormat, Culture)).Append(',')
+                    .Append(sample.balanceScale.ToString(ScaleFormat, Culture)).Append(',')
+                    .Append(sample.assistDistance.ToString(EnergyFormat, Culture)).Append(',')
+                    .Append(sample.boostDistance.ToString(EnergyFormat, Culture)).Append(',')
+                    .Append(sample.gapToPlayer.ToString(EnergyFormat, Culture)).Append(',')
+                    .Append(sample.gapToLeader.ToString(EnergyFormat, Culture)).Append(',')
                     .AppendLine(sample.aiState);
             }
             return builder.ToString();
         }
 
-        private static string BuildEvents(ITelemetryRecorder recorder, string[] carNames)
+        private static string BuildEvents(ITelemetryLog log)
         {
-            var culture = CultureInfo.InvariantCulture;
-            var builder = new StringBuilder(recorder.Events.Count * 64);
+            var builder = new StringBuilder(log.Events.Count * EventLineBudget);
             builder.AppendLine(EventHeader);
-            foreach (var entry in recorder.Events)
+            foreach (var entry in log.Events)
             {
-                builder.Append(entry.time.ToString("0.###", culture)).Append(',')
+                builder.Append(entry.time.ToString(TimeFormat, Culture)).Append(',')
                     .Append(entry.carIndex).Append(',')
-                    .Append(carNames[entry.carIndex]).Append(',')
+                    .Append(log.CarNames[entry.carIndex]).Append(',')
                     .Append(entry.kind).Append(',')
                     .Append(entry.level).Append(',')
                     .AppendLine(entry.detail);

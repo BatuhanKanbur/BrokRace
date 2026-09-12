@@ -1,11 +1,12 @@
-using System;
 using Core.DI.Attributes;
 using Core.DI.Inheritances;
 using Game.Boost.Interfaces;
+using Game.Boost.Logics;
 using Game.Boost.Managers;
 using Game.Cars.Interfaces;
 using Game.Cars.Managers;
 using Game.Cars.Structure;
+using Game.Configuration.Structure;
 using Game.Track.Interfaces;
 using UnityEngine;
 using static Game.Cars.Constants.CarConstants;
@@ -22,12 +23,12 @@ namespace Game.Cars.Behaviours
 
         [Inject] private ITrackPath _track;
 
+        private readonly BoostController _boost = new();
         private ICarVisual _visual;
         private ICarMotion _motion;
-        private BoostController _boost;
+        private BoostSettings _settings;
         private float _laneOffset;
-
-        public event Action<ICar, float> OnCrossedFinish;
+        private float _finishDistance;
 
         public Transform Transform => transform;
         public int Index { get; private set; }
@@ -35,9 +36,11 @@ namespace Game.Cars.Behaviours
         public bool IsPlayer { get; private set; }
         public float Distance => _motion.Distance;
         public float Speed => _motion.Speed;
-        public float BaseSpeed => _motion.BaseSpeed;
+        public float NaturalSpeed => _motion.NaturalSpeed;
         public float BalanceScale => _motion.BalanceScale;
         public float BoostDistance => _motion.BoostDistance;
+        public float AssistDistance => _motion.AssistDistance;
+        public float Progress => _motion.Distance / _finishDistance;
         public bool HasFinished { get; private set; }
         public int FinishOrder { get; private set; }
         public float FinishTime { get; private set; }
@@ -49,6 +52,9 @@ namespace Game.Cars.Behaviours
         {
             base.Awake();
             _visual = new CarVisual(paintSlots, wheels, body, trails, wheelRadius);
+            _motion = new CarMotion(_boost, _boost);
+            _boost.OnBoostStarted += PlayBoostCue;
+            _boost.OnBoostEnded += _visual.StopBoost;
         }
 
         public void Initialize(CarSetup setup)
@@ -57,35 +63,28 @@ namespace Game.Cars.Behaviours
             DisplayName = setup.DisplayName;
             IsPlayer = setup.IsPlayer;
             _laneOffset = setup.LaneOffset;
+            _finishDistance = setup.FinishDistance;
+            _settings = setup.Boost;
             HasFinished = false;
             FinishOrder = 0;
             FinishTime = 0f;
 
-            Detach();
-            _boost = new BoostController(setup.Boost);
-            _boost.OnBoostStarted += _visual.PlayBoost;
-            _boost.OnBoostEnded += _visual.StopBoost;
-            _motion = new CarMotion(_boost, _boost, setup.NaturalSpeed, setup.FinishDistance);
-
+            _boost.Configure(setup.Boost);
+            _motion.Configure(setup.NaturalSpeed, setup.FinishDistance);
             _visual.Reset();
             _visual.Paint(setup.Paint);
             transform.position = _track.GetPosition(0f, _laneOffset);
             transform.rotation = _track.GetRotation(0f);
         }
 
-        public void Step(float stepTime)
-        {
-            var step = _motion.Advance(stepTime);
-            if (step.HasCrossed && !HasFinished)
-                OnCrossedFinish?.Invoke(this, step.CrossOffset);
-        }
+        public MotionStep Step(float stepTime) => _motion.Advance(stepTime);
 
         public void Present(float deltaTime)
         {
             transform.position = _track.GetPosition(_motion.Distance, _laneOffset);
             transform.rotation = Quaternion.Slerp(transform.rotation, _track.GetRotation(_motion.Distance),
                 RotationBlendSpeed * deltaTime);
-            _visual.Tick(_motion.Speed, deltaTime);
+            _visual.Present(_motion.Speed, deltaTime);
         }
 
         public void SetBalanceScale(float scale) => _motion.SetBalanceScale(scale);
@@ -101,17 +100,8 @@ namespace Game.Cars.Behaviours
             FinishTime = time;
         }
 
-        public void Release()
-        {
-            Detach();
-            gameObject.SetActive(false);
-        }
+        public void Release() => gameObject.SetActive(false);
 
-        private void Detach()
-        {
-            if (_boost == null) return;
-            _boost.OnBoostStarted -= _visual.PlayBoost;
-            _boost.OnBoostEnded -= _visual.StopBoost;
-        }
+        private void PlayBoostCue(int level) => _visual.PlayBoost(level, BoostPalette.ForLevel(_settings, level));
     }
 }

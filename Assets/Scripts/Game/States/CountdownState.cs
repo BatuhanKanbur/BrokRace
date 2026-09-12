@@ -35,6 +35,8 @@ namespace Game.States
             _shown = -1;
             _view = _uiManager.GetView<CountdownView>();
             _view.SetHint(CountdownHint);
+            _uiManager.GetView<RaceHudView>().Bind(_configService.Config.boost);
+            _uiManager.GetView<DebugOverlayView>().Bind(_race.Drivers);
             _uiManager.Show<CountdownView>();
             _uiManager.Show<RaceHudView>();
         }
@@ -48,6 +50,7 @@ namespace Game.States
                 _shown = count;
                 _view.SetCount(count);
             }
+            _race.PumpInput();
             _race.Present(Time.deltaTime);
             if (_remaining > 0f) return;
             GameManager.ChangeState(new RacingState(GameManager, _seed, _input));

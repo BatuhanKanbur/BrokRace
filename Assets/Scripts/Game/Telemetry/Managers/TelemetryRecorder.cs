@@ -12,7 +12,7 @@ using static Game.Telemetry.Constants.TelemetryConstants;
 
 namespace Game.Telemetry.Managers
 {
-    public class TelemetryRecorder : ITelemetryRecorder
+    public class TelemetryRecorder : ITelemetryRecorder, ITelemetryLog
     {
         private readonly TelemetrySettings _settings;
         private readonly IRaceState _race;
@@ -20,6 +20,7 @@ namespace Game.Telemetry.Managers
         private readonly Dictionary<int, IAiDriver> _drivers = new();
         private readonly List<CarSample> _samples = new();
         private readonly List<RaceEvent> _events = new();
+        private readonly List<string> _carNames = new();
         private readonly Dictionary<int, bool> _wasAhead = new();
 
         private RaceRunInfo _info;
@@ -41,29 +42,31 @@ namespace Game.Telemetry.Managers
             _order = order;
             foreach (var driver in drivers)
                 _drivers[driver.CarIndex] = driver;
+            foreach (var car in race.Cars)
+                _carNames.Add(car.DisplayName);
         }
 
         public IReadOnlyList<CarSample> Samples => _samples;
         public IReadOnlyList<RaceEvent> Events => _events;
+        public IReadOnlyList<string> CarNames => _carNames;
 
         public void Begin(RaceRunInfo info)
         {
             Reset();
             _info = info;
             foreach (var car in _race.Cars)
-                if (!car.IsPlayer)
-                    _wasAhead[car.Index] = false;
+                _wasAhead[car.Index] = false;
             Sample();
         }
 
         public void Step(float stepTime)
         {
             TrackOvertakes();
-            TrackLeader();
-            TrackSpread();
             _sampleTimer += stepTime;
             if (_sampleTimer < _settings.sampleInterval) return;
             _sampleTimer -= _settings.sampleInterval;
+            TrackLeader();
+            TrackSpread();
             Sample();
         }
 
@@ -82,11 +85,12 @@ namespace Game.Telemetry.Managers
             carIndex = car.Index,
             kind = Finish,
             level = car.FinishOrder,
-            detail = $"rank {car.FinishOrder}"
+            detail = car.FinishTime.ToString(TimeFormat)
         });
 
         public RaceReport Complete()
         {
+            TrackSpread();
             Sample();
             var player = _race.Player;
             var report = new RaceReport
@@ -98,8 +102,9 @@ namespace Game.Telemetry.Managers
                 playerFinishTime = player.FinishTime,
                 playerFinishRank = player.FinishOrder,
                 leadChanges = _leadChanges,
-                playerBuffDistance = player.BoostDistance,
-                playerBaselineDistance = player.Ledger.ExtraLevelSum * _info.baseSpeed * _info.boostWindow,
+                playerBoostDistance = player.BoostDistance,
+                playerExpectedBoostDistance = player.Ledger.ExtraLevelSum * player.NaturalSpeed * _info.boostWindow,
+                playerAssistDistance = player.AssistDistance,
                 averagePackSpread = _spreadCount > 0 ? _spreadSum / _spreadCount : 0f,
                 maxPackSpread = _spreadMax,
                 packSpreadAtFinish = _spreadLast
@@ -110,6 +115,7 @@ namespace Game.Telemetry.Managers
 
         public void Reset()
         {
+            _info = null;
             _samples.Clear();
             _events.Clear();
             _wasAhead.Clear();
@@ -134,17 +140,28 @@ namespace Game.Telemetry.Managers
                 {
                     time = _race.Time,
                     carIndex = car.Index,
+                    isPlayer = car.IsPlayer,
                     rank = _order.RankOf(car),
                     distance = car.Distance,
                     speed = car.Speed,
                     boostLevel = car.BoostState.ActiveLevel,
                     energy = car.BoostState.Energy,
                     balanceScale = car.BalanceScale,
+                    assistDistance = car.AssistDistance,
+                    boostDistance = car.BoostDistance,
                     gapToPlayer = car.Distance - player.Distance,
                     gapToLeader = leader.Distance - car.Distance,
-                    aiState = _drivers.TryGetValue(car.Index, out var driver) ? driver.StateLabel : PlayerState
+                    aiState = Describe(car)
                 });
             }
+        }
+
+        private string Describe(ICarProgress car)
+        {
+            if (!_drivers.TryGetValue(car.Index, out var driver)) return PlayerState;
+            var decision = driver.LastDecision;
+            return $"{driver.ProfileName}:{decision.Level} s{decision.Strike:0.00} d{decision.Defend:0.00} " +
+                   $"p{decision.Pace:0.00} c{decision.Closing:0.00} e{decision.Spill:0.00}";
         }
 
         private void TrackOvertakes()
@@ -188,7 +205,15 @@ namespace Game.Telemetry.Managers
 
         private void TrackSpread()
         {
-            _spreadLast = _order.Leader.Distance - _order.Trailer.Distance;
+            var front = float.MinValue;
+            var back = float.MaxValue;
+            foreach (var car in _race.Cars)
+            {
+                var reached = Mathf.Min(car.Distance, _race.RaceDistance);
+                front = Mathf.Max(front, reached);
+                back = Mathf.Min(back, reached);
+            }
+            _spreadLast = front - back;
             _spreadSum += _spreadLast;
             _spreadMax = Mathf.Max(_spreadMax, _spreadLast);
             _spreadCount++;
@@ -211,7 +236,10 @@ namespace Game.Telemetry.Managers
                     acceptedBoosts = car.Ledger.AcceptedCount,
                     rejectedBoosts = car.Ledger.RejectedCount,
                     energySpent = car.Ledger.EnergySpent,
+                    energyWasted = car.Ledger.EnergyWasted,
                     boostedSeconds = car.Ledger.BoostedSeconds,
+                    boostDistance = car.BoostDistance,
+                    assistDistance = car.AssistDistance,
                     averageSpeed = car.FinishTime > 0f ? _info.raceDistance / car.FinishTime : 0f
                 };
             }

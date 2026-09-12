@@ -1,4 +1,5 @@
 using UnityEngine;
+using static Game.Race.Constants.RaceConstants;
 
 namespace Game.Configuration.Structure
 {
@@ -19,6 +20,15 @@ namespace Game.Configuration.Structure
         public TelemetrySettings telemetry = new();
         [Header("Grid")]
         public CarEntry player = new();
-        public RivalEntry[] rivals = new RivalEntry[7];
+        public RivalEntry[] rivals = new RivalEntry[RivalCount];
+
+        private void OnValidate()
+        {
+            if (rivals.Length == RivalCount) return;
+            var resized = new RivalEntry[RivalCount];
+            for (var index = 0; index < RivalCount; index++)
+                resized[index] = index < rivals.Length ? rivals[index] : new RivalEntry();
+            rivals = resized;
+        }
     }
 }

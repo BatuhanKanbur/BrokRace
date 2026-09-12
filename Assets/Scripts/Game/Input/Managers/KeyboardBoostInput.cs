@@ -1,8 +1,8 @@
 using System;
+using System.Collections.Generic;
 using Game.Input.Interfaces;
-using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Controls;
+using static Game.Boost.Constants.BoostConstants;
 
 namespace Game.Input.Managers
 {
@@ -17,24 +17,28 @@ namespace Game.Input.Managers
             Key.Numpad1, Key.Numpad2, Key.Numpad3, Key.Numpad4, Key.Numpad5
         };
 
-        public event Action<int> OnBoostRequested;
-        private int _sampledFrame = -1;
+        private readonly List<int> _pending = new();
 
-        public void Sample(float raceTime)
+        public event Action<int> OnBoostRequested;
+
+        public void Poll()
         {
-            if (_sampledFrame == Time.frameCount) return;
-            _sampledFrame = Time.frameCount;
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
-            for (var index = 0; index < DigitRow.Length; index++)
+            for (var index = 0; index < LevelCount; index++)
             {
-                if (WasPressed(keyboard[DigitRow[index]]) || WasPressed(keyboard[NumpadRow[index]]))
-                    OnBoostRequested?.Invoke(index + 1);
+                if (keyboard[DigitRow[index]].wasPressedThisFrame || keyboard[NumpadRow[index]].wasPressedThisFrame)
+                    _pending.Add(index + MinLevel);
             }
         }
 
-        public void Reset() => _sampledFrame = -1;
+        public void Sample(float raceTime)
+        {
+            foreach (var level in _pending)
+                OnBoostRequested?.Invoke(level);
+            _pending.Clear();
+        }
 
-        private static bool WasPressed(KeyControl control) => control.wasPressedThisFrame;
+        public void Reset() => _pending.Clear();
     }
 }

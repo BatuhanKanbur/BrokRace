@@ -35,7 +35,8 @@ namespace Game.States
             _view.ShowResults(_race.Order.Order, _raceState.Player);
             _view.OnRestartClicked += HandleRestart;
             _uiManager.Show<ResultView>();
-            _writer.Write(_race.Telemetry, $"{LiveRunPrefix}_{_seed}", BuildCarNames());
+            var report = _race.BuildReport(LiveRunPrefix, Application.targetFrameRate);
+            _writer.Write(_race.Log, report, $"{LiveRunPrefix}_{_seed}");
         }
 
         public override void Tick() => _race.Present(Time.deltaTime);
@@ -51,14 +52,6 @@ namespace Game.States
             var settings = _configService.Config.race;
             var seed = settings.randomizeSeed ? Random.Range(1, int.MaxValue) : settings.seed;
             GameManager.ChangeState(new CountdownState(GameManager, seed, _input));
-        }
-
-        private string[] BuildCarNames()
-        {
-            var names = new string[_raceState.Cars.Count];
-            for (var index = 0; index < names.Length; index++)
-                names[index] = _raceState.Cars[index].DisplayName;
-            return names;
         }
     }
 }

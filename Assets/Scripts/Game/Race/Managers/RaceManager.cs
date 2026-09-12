@@ -8,6 +8,7 @@ using Game.Ai.Managers;
 using Game.Balancing.Interfaces;
 using Game.Balancing.Managers;
 using Game.Boost.Enums;
+using Game.Boost.Logics;
 using Game.Camera.Interfaces;
 using Game.Cars.Interfaces;
 using Game.Cars.Structure;
@@ -41,28 +42,35 @@ namespace Game.Race.Managers
         private readonly List<ICar> _cars = new();
         private readonly List<IAiDriver> _drivers = new();
         private readonly List<FinishCrossing> _crossings = new();
+        private readonly List<FinishCrossing> _finishing = new();
+        private readonly List<int> _pendingRequests = new();
         private readonly StandingsManager _standings = new();
 
         private IRaceBalancer _balancer;
-        private ITelemetryRecorder _telemetry;
+        private IAiAirspace _airspace;
+        private TelemetryRecorder _telemetry;
         private IBoostInputSource _input;
         private RaceConfig _config;
         private float[] _laneOffsets;
+        private int[] _slotToProfile;
         private float _accumulator;
+        private int _stepIndex;
 
-        public event Action<ICarProgress> OnCarFinished;
-        public event Action OnRaceCompleted;
         public event Action<int> OnBoostAccepted;
         public event Action<int, BoostRequestOutcome> OnBoostRejected;
 
         public int Seed { get; private set; }
         public float Time { get; private set; }
         public float RaceDistance => _config.track.raceDistance;
+        public float LogicStep => Mathf.Max(_config.race.logicStep, MinimumLogicStep);
         public bool IsRunning { get; private set; }
+        public bool HasCompleted { get; private set; }
         public IReadOnlyList<ICar> Cars => _cars;
         public ICar Player { get; private set; }
         public IRaceOrder Order => _standings;
-        public ITelemetryRecorder Telemetry => _telemetry;
+        public IRaceBalancer Balancer => _balancer;
+        public ITelemetryLog Log => _telemetry;
+        public IReadOnlyList<IAiDriver> Drivers => _drivers;
 
         public async UniTask Build()
         {
@@ -70,7 +78,9 @@ namespace Game.Race.Managers
             await _trackBuilder.Build(_config.track);
             await SpawnGrid();
             _standings.Register(_cars);
-            _balancer = new RubberBandBalancer(_config.balance, this);
+            _standings.OnCarFinished += HandleCarFinished;
+            _balancer = new RubberBandBalancer(_config.balance, this, _standings);
+            _airspace = new AiAirspace(_config.ai.airspaceGate);
             _camera.Follow(Player.Transform);
         }
 
@@ -79,33 +89,32 @@ namespace Game.Race.Managers
             Seed = seed;
             Time = 0f;
             _accumulator = 0f;
+            _stepIndex = 0;
             IsRunning = false;
+            HasCompleted = false;
             _crossings.Clear();
+            _pendingRequests.Clear();
             _drivers.Clear();
 
             DetachInput();
             _input = input;
             _input.Reset();
-            _input.OnBoostRequested += HandleRequest;
+            _input.OnBoostRequested += Enqueue;
 
+            _slotToProfile = ShuffledProfiles(seed);
             for (var index = 0; index < _cars.Count; index++)
-                _cars[index].Initialize(BuildSetup(index));
+                _cars[index].Initialize(BuildSetup(index, seed));
             for (var index = 1; index < _cars.Count; index++)
-                _drivers.Add(new AiDriver(_cars[index], _config.rivals[index - 1].profile, _config.ai, _config.boost,
-                    this, _standings, DeterministicRandom.Stream(seed, index)));
+                _drivers.Add(new AiDriver(_cars[index], ProfileFor(index), _config.ai, _config.boost, this,
+                    _standings, LogicStep, seed));
 
             _telemetry = new TelemetryRecorder(_config.telemetry, this, _standings, _drivers);
-            foreach (var car in _cars)
-            {
-                var tracked = car;
-                car.OnCrossedFinish -= HandleCrossing;
-                car.OnCrossedFinish += HandleCrossing;
-                car.Boost.OnBoostStarted += level => _telemetry.RecordRequest(tracked, level, BoostRequestOutcome.Accepted);
-                car.Boost.OnRequestRejected += (level, outcome) => _telemetry.RecordRequest(tracked, level, outcome);
-            }
-
             _standings.Reset();
             _balancer.Reset();
+            _balancer.Register(Player, 0f);
+            for (var index = 1; index < _cars.Count; index++)
+                _balancer.Register(_cars[index], ProfileFor(index).balanceResponse);
+            _airspace.Reset();
             _camera.Snap();
             Present(0f);
         }
@@ -118,11 +127,19 @@ namespace Game.Race.Managers
             _telemetry.Begin(BuildRunInfo());
         }
 
+        public void PumpInput()
+        {
+            _input.Poll();
+            _input.Sample(Time);
+            DrainRequests();
+        }
+
         public void Tick(float frameTime)
         {
+            _input.Poll();
             if (!IsRunning) return;
             _accumulator += Mathf.Min(frameTime, _config.race.maxFrameTime);
-            var step = Mathf.Max(_config.race.logicStep, MinimumLogicStep);
+            var step = LogicStep;
             while (_accumulator >= step && IsRunning)
             {
                 Step(step);
@@ -156,10 +173,7 @@ namespace Game.Race.Managers
         {
             DetachInput();
             foreach (var car in _cars)
-            {
-                car.OnCrossedFinish -= HandleCrossing;
                 car.Release();
-            }
             _cars.Clear();
             _drivers.Clear();
         }
@@ -168,47 +182,65 @@ namespace Game.Race.Managers
         {
             var stepStart = Time;
             _input.Sample(stepStart);
-            foreach (var driver in _drivers)
-                driver.Step(stepTime);
+            DrainRequests();
+            RunDrivers();
             _balancer.Step(stepTime);
             foreach (var car in _cars)
-                car.Step(stepTime);
+            {
+                var motion = car.Step(stepTime);
+                if (motion.HasCrossed && !car.HasFinished)
+                    _crossings.Add(new FinishCrossing(car, motion.CrossOffset));
+            }
             Time = stepStart + stepTime;
             _standings.Refresh();
-            ResolveCrossings(stepStart);
+            if (_crossings.Count > 0) ResolveCrossings(stepStart);
             _telemetry.Step(stepTime);
+            _stepIndex++;
+        }
+
+        private void RunDrivers()
+        {
+            var offset = (Seed + _stepIndex) % _drivers.Count;
+            for (var slot = 0; slot < _drivers.Count; slot++)
+            {
+                var driver = _drivers[(offset + slot) % _drivers.Count];
+                var car = _cars[driver.CarIndex];
+                if (car.HasFinished) continue;
+                var level = driver.Decide();
+                if (level == 0 || !_airspace.TryClaim(Time)) continue;
+                RequestBoost(car, level);
+            }
         }
 
         private void ResolveCrossings(float stepStart)
         {
-            if (_crossings.Count == 0) return;
-            _crossings.Sort(CompareCrossings);
-            foreach (var crossing in _crossings)
-            {
-                _standings.ReportFinish(crossing.Car, stepStart + crossing.Offset);
-                _telemetry.RecordFinish(crossing.Car);
-                OnCarFinished?.Invoke(crossing.Car);
-            }
+            _finishing.Clear();
+            _finishing.AddRange(_crossings);
             _crossings.Clear();
-            _standings.Refresh();
+            foreach (var crossing in _finishing)
+                crossing.Car.CloseBoostWindow();
+            _standings.ReportCrossings(_finishing, stepStart);
             if (_standings.FinishedCount < _cars.Count) return;
             Conclude();
-            OnRaceCompleted?.Invoke();
+            HasCompleted = true;
         }
 
-        private static int CompareCrossings(FinishCrossing left, FinishCrossing right)
+        private void HandleCarFinished(ICarProgress car) => _telemetry.RecordFinish(car);
+
+        private void Enqueue(int level) => _pendingRequests.Add(level);
+
+        private void DrainRequests()
         {
-            var byTime = left.Offset.CompareTo(right.Offset);
-            if (byTime != 0) return byTime;
-            var bySpeed = right.Car.Speed.CompareTo(left.Car.Speed);
-            return bySpeed != 0 ? bySpeed : left.Car.Index.CompareTo(right.Car.Index);
+            foreach (var level in _pendingRequests)
+                RequestBoost(Player, level);
+            _pendingRequests.Clear();
         }
 
-        private void HandleCrossing(ICar car, float offset) => _crossings.Add(new FinishCrossing(car, offset));
-
-        private void HandleRequest(int level)
+        private void RequestBoost(ICar car, int level)
         {
-            var outcome = Player.Boost.Request(level);
+            var outcome = car.Boost.Request(level);
+            _telemetry.RecordRequest(car, level, outcome);
+            if (!car.IsPlayer) return;
             if (outcome == BoostRequestOutcome.Accepted) OnBoostAccepted?.Invoke(level);
             else OnBoostRejected?.Invoke(level, outcome);
         }
@@ -216,7 +248,7 @@ namespace Game.Race.Managers
         private void DetachInput()
         {
             if (_input == null) return;
-            _input.OnBoostRequested -= HandleRequest;
+            _input.OnBoostRequested -= Enqueue;
             _input = null;
         }
 
@@ -238,14 +270,36 @@ namespace Game.Race.Managers
             return instance.GetComponent<ICar>();
         }
 
-        private CarSetup BuildSetup(int index)
+        private AiProfile ProfileFor(int carIndex) => _config.rivals[_slotToProfile[carIndex - 1]].profile;
+
+        private CarSetup BuildSetup(int index, int seed)
         {
             if (index == PlayerIndex)
                 return new CarSetup(index, _config.player.displayName, true, _config.player.paint,
                     _laneOffsets[index], _config.race.baseSpeed, _config.track.raceDistance, _config.boost);
-            var rival = _config.rivals[index - 1];
+            var rival = _config.rivals[_slotToProfile[index - 1]];
+            var jitter = DeterministicRandom.Stream(seed, index * JitterSalt);
+            var speed = _config.race.baseSpeed * rival.profile.speedScale
+                        * (1f + _config.race.speedScaleJitter * jitter.Signed());
+            var economy = BoostEconomy.Scaled(_config.boost, rival.profile.energyRegenScale,
+                rival.profile.energyCapacityScale,
+                rival.profile.energyStartScale * (1f + _config.race.energyStartJitter * jitter.Signed()));
             return new CarSetup(index, rival.displayName, false, rival.paint, _laneOffsets[index],
-                _config.race.baseSpeed * rival.profile.speedScale, _config.track.raceDistance, _config.boost);
+                speed, _config.track.raceDistance, economy);
+        }
+
+        private int[] ShuffledProfiles(int seed)
+        {
+            var slots = new int[_config.rivals.Length];
+            for (var index = 0; index < slots.Length; index++)
+                slots[index] = index;
+            var random = DeterministicRandom.Stream(seed, LayoutSalt);
+            for (var index = slots.Length - 1; index > 0; index--)
+            {
+                var swap = random.Range(0, index + 1);
+                (slots[index], slots[swap]) = (slots[swap], slots[index]);
+            }
+            return slots;
         }
 
         private RaceRunInfo BuildRunInfo() => new()
@@ -254,7 +308,7 @@ namespace Game.Race.Managers
             scenario = string.Empty,
             raceDistance = _config.track.raceDistance,
             baseSpeed = _config.race.baseSpeed,
-            logicStep = _config.race.logicStep,
+            logicStep = LogicStep,
             boostWindow = _config.boost.windowDuration,
             balancingEnabled = _balancer.IsEnabled
         };

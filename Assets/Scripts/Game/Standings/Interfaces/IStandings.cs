@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Game.Cars.Interfaces;
+using Game.Race.Structure;
 
 namespace Game.Standings.Interfaces
 {
@@ -10,7 +11,7 @@ namespace Game.Standings.Interfaces
         public event Action<ICarProgress> OnCarFinished;
         public void Register(IReadOnlyList<ICar> cars);
         public void Refresh();
-        public void ReportFinish(ICar car, float crossTime);
+        public void ReportCrossings(List<FinishCrossing> crossings, float stepStart);
         public void Reset();
     }
 }

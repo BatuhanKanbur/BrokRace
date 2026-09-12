@@ -1,10 +1,11 @@
+using System.Collections.Generic;
 using System.Text;
 using Core.UI.Abstracts;
+using Game.Ai.Interfaces;
 using Game.Race.Interfaces;
 using Game.Standings.Interfaces;
 using Game.Telemetry.Interfaces;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using static Game.UI.Constants.HudConstants;
 
@@ -16,31 +17,47 @@ namespace Game.UI.Views
         [SerializeField] private Text bodyText;
 
         private readonly StringBuilder _builder = new();
-        private bool _visible;
+        private readonly Dictionary<int, IAiDriver> _drivers = new();
 
-        public void Refresh(IRaceState race, IRaceOrder order, ITelemetryRecorder telemetry)
+        public bool IsOpen { get; private set; }
+
+        public void Bind(IReadOnlyList<IAiDriver> drivers)
         {
-            if (Keyboard.current != null && Keyboard.current[ToggleKey].wasPressedThisFrame) Toggle();
-            if (!_visible) return;
+            _drivers.Clear();
+            foreach (var driver in drivers)
+                _drivers[driver.CarIndex] = driver;
+        }
+
+        public void Toggle()
+        {
+            IsOpen = !IsOpen;
+            if (IsOpen) Show(OverlayFadeDuration);
+            else Hide(OverlayFadeDuration);
+        }
+
+        public void Refresh(IRaceState race, IRaceOrder order, ITelemetryLog log, bool balancingSuspended)
+        {
+            if (!IsOpen) return;
             var player = race.Player;
-            headerText.text = $"seed {race.Seed}   t {race.Time:0.00}s   samples {telemetry.Samples.Count}";
+            headerText.text = string.Format(OverlayHeaderFormat, race.Seed, race.Time, race.LogicStep * MillisPerSecond,
+                log.Samples.Count, balancingSuspended ? SuspendedLabel : ActiveLabel);
             _builder.Clear();
-            _builder.AppendLine(OverlayHeader);
+            _builder.AppendLine(OverlayColumns);
             foreach (var car in order.Order)
             {
-                _builder.AppendLine(
-                    $"{order.RankOf(car)}  {car.DisplayName,-10} {car.Distance,8:0.0} {car.Speed,6:0.0} " +
-                    $"{car.Distance - player.Distance,8:+0.0;-0.0;0.0} x{car.BoostState.ActiveLevel} " +
-                    $"{car.BoostState.Energy,5:0} {car.BalanceScale,6:0.000}");
+                _builder.AppendLine(string.Format(OverlayRowFormat, order.RankOf(car), car.DisplayName,
+                    car.Distance, car.Speed, car.Distance - player.Distance, car.BoostState.ActiveLevel,
+                    car.BoostState.Energy, car.BalanceScale, car.AssistDistance, StateOf(car.Index)));
             }
             bodyText.text = _builder.ToString();
         }
 
-        private void Toggle()
+        private string StateOf(int carIndex)
         {
-            _visible = !_visible;
-            if (_visible) Show(OverlayFadeDuration);
-            else Hide(OverlayFadeDuration);
+            if (!_drivers.TryGetValue(carIndex, out var driver)) return PlayerLabel;
+            var decision = driver.LastDecision;
+            return string.Format(OverlayStateFormat, driver.ProfileName, decision.Level, decision.Strike,
+                decision.Defend, decision.Pace, decision.Closing, decision.Spill, decision.Score, decision.HoldScore);
         }
     }
 }
