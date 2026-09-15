@@ -10,6 +10,9 @@ namespace Game.Configuration.Structure
         public float raceDistance = 1300f;
         public float roadWidth = 19f;
         public float laneSpacing = 2.2f;
+        public AssetReference trackPrefab;
+
+        [Header("Bake Source")]
         public Vector3[] shapePoints =
         {
             new(0f, 0f, 0f),

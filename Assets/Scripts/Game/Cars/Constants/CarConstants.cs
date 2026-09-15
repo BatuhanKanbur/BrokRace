@@ -10,6 +10,7 @@ namespace Game.Cars.Constants
         public const float FullCircle = 360f;
         public const float Tau = 6.2831853f;
         public const float NoCrossing = -1f;
+        public const float LaunchArea = 0.5f;
         public const float TrailWidth = 0.32f;
         public const float TrailDuration = 0.16f;
         public const float TrailFloor = 0.18f;

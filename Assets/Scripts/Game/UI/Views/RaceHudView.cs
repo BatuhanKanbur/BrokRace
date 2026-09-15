@@ -1,3 +1,4 @@
+using System;
 using Core.UI.Abstracts;
 using Core.Utilities;
 using Cysharp.Threading.Tasks;
@@ -20,23 +21,52 @@ namespace Game.UI.Views
         [SerializeField] private Text boostText;
         [SerializeField] private Text energyText;
         [SerializeField] private Text feedbackText;
-        [SerializeField] private Image progressFill;
-        [SerializeField] private Image energyFill;
-        [SerializeField] private Image boostFill;
-        [SerializeField] private Image[] keySlots;
+        [SerializeField] private Slider progressBar;
+        [SerializeField] private Slider energyBar;
+        [SerializeField] private Slider boostBar;
+        [SerializeField] private Button[] boostButtons;
+        [SerializeField] private Button overlayButton;
         [SerializeField] private CanvasGroup feedbackGroup;
         [SerializeField] private RectTransform rankCard;
 
         private BoostSettings _settings;
+        private Image _energyFill;
+        private Image _boostFill;
+        private Color _energyTint;
+        private float _restingDial;
+        private float _peakDial;
+        private float _dial;
+        private float _energyFlash;
         private int _shownRank;
         private int _shownSpeed;
         private int _shownRemaining;
         private int _shownEnergy;
         private int _shownLevel;
 
-        public void Bind(BoostSettings settings)
+        public event Action<int> OnBoostPressed;
+        public event Action OnOverlayPressed;
+
+        protected override void Initialize()
         {
-            _settings = settings;
+            base.Initialize();
+            _energyFill = energyBar.fillRect.GetComponent<Image>();
+            _boostFill = boostBar.fillRect.GetComponent<Image>();
+            _energyTint = _energyFill.color;
+            for (var index = 0; index < boostButtons.Length; index++)
+            {
+                var level = index + MinLevel;
+                boostButtons[index].onClick.AddListener(() => Press(level));
+            }
+            overlayButton.onClick.AddListener(() => OnOverlayPressed?.Invoke());
+        }
+
+        public void Bind(BoostSettings boost, RaceSettings race)
+        {
+            _settings = boost;
+            _restingDial = race.baseSpeed * KilometresPerHour;
+            _peakDial = _restingDial * MaxLevel;
+            _dial = _restingDial;
+            _energyFlash = 0f;
             _shownRank = 0;
             _shownSpeed = -1;
             _shownRemaining = -1;
@@ -46,23 +76,19 @@ namespace Game.UI.Views
 
         public void Refresh(IBoostState boost, int rank, int total, float speed, float travelled, float raceDistance)
         {
-            progressFill.fillAmount = Mathf.Clamp01(travelled / raceDistance);
-            energyFill.fillAmount = boost.EnergyRatio;
-            boostFill.fillAmount = boost.IsActive ? boost.RemainingWindow / boost.WindowDuration : 0f;
+            progressBar.value = Mathf.Clamp01(travelled / raceDistance);
+            energyBar.value = boost.EnergyRatio;
+            boostBar.value = boost.IsActive ? boost.RemainingWindow / boost.WindowDuration : 0f;
+            PaintEnergy(boost);
 
             if (rank != _shownRank)
             {
-                var gained = rank < _shownRank && _shownRank > 0;
+                var previous = _shownRank;
                 _shownRank = rank;
                 rankText.text = string.Format(RankFormat, rank, total);
-                if (gained) PulseRank().Forget();
+                if (previous > 0) MarkRankChange(rank < previous);
             }
-            var roundedSpeed = Mathf.RoundToInt(speed);
-            if (roundedSpeed != _shownSpeed)
-            {
-                _shownSpeed = roundedSpeed;
-                speedText.text = string.Format(SpeedFormat, roundedSpeed);
-            }
+            RefreshDial(speed);
             var remaining = Mathf.RoundToInt(Mathf.Max(0f, raceDistance - travelled));
             if (remaining != _shownRemaining)
             {
@@ -83,15 +109,16 @@ namespace Game.UI.Views
             if (boost.ActiveLevel != _shownLevel)
             {
                 _shownLevel = boost.ActiveLevel;
-                boostFill.color = BoostPalette.ForLevel(_settings, Mathf.Max(_shownLevel, MinLevel));
+                _boostFill.color = BoostPalette.ForLevel(_settings, Mathf.Max(_shownLevel, MinLevel));
             }
-            RefreshKeys(boost);
+            RefreshBoostButtons(boost);
         }
 
         public void FlashAccepted(int level)
         {
             feedbackText.text = string.Format(AcceptedFormat, level);
             feedbackText.color = BoostPalette.ForLevel(_settings, level);
+            _energyFlash = 1f;
             Pulse();
         }
 
@@ -102,12 +129,50 @@ namespace Game.UI.Views
             Pulse();
         }
 
-        private void RefreshKeys(IBoostState boost)
+        private void RefreshDial(float speed)
         {
-            for (var index = 0; index < keySlots.Length; index++)
+            var target = speed * KilometresPerHour;
+            _dial = Mathf.Lerp(_dial, target, DialLerp * Time.deltaTime);
+            var rounded = Mathf.RoundToInt(_dial);
+            if (rounded != _shownSpeed)
+            {
+                _shownSpeed = rounded;
+                speedText.text = string.Format(SpeedFormat, rounded);
+            }
+            speedText.color = Color.Lerp(SpeedCalmColor, SpeedHotColor,
+                Mathf.InverseLerp(_restingDial, _peakDial, _dial));
+        }
+
+        private void PaintEnergy(IBoostState boost)
+        {
+            _energyFlash = Mathf.MoveTowards(_energyFlash, 0f, EnergyFlashFade * Time.deltaTime);
+            var lack = 1f - Mathf.InverseLerp(0f, LowEnergyRatio, boost.EnergyRatio);
+            var pulse = Mathf.Abs(Mathf.Sin(Time.time * LowEnergyPulseRate)) * lack;
+            _energyFill.color = Color.Lerp(Color.Lerp(_energyTint, LowEnergyColor, pulse),
+                EnergyFlashColor, _energyFlash);
+        }
+
+        private void MarkRankChange(bool gained)
+        {
+            var token = this.GetCancellationTokenOnDestroy();
+            rankCard.GoPunch(RankPulseScale, RankPulseDuration, token);
+            rankText.color = gained ? RankGainColor : RankLossColor;
+            rankText.GoTint(RankRestColor, RankTintDuration, token: token);
+        }
+
+        private void Press(int level)
+        {
+            boostButtons[level - MinLevel].image.rectTransform.GoPunch(KeyPunchScale, KeyPunchDuration,
+                this.GetCancellationTokenOnDestroy());
+            OnBoostPressed?.Invoke(level);
+        }
+
+        private void RefreshBoostButtons(IBoostState boost)
+        {
+            for (var index = 0; index < boostButtons.Length; index++)
             {
                 var level = index + MinLevel;
-                keySlots[index].color = boost.ActiveLevel == level
+                boostButtons[index].image.color = boost.ActiveLevel == level
                     ? BoostPalette.ForLevel(_settings, level)
                     : IsBlocked(boost, level) ? BlockedColor : ReadyColor;
             }
@@ -116,24 +181,12 @@ namespace Game.UI.Views
         private static bool IsBlocked(IBoostState boost, int level) =>
             boost.IsActive || boost.RemainingCooldown > 0f || !boost.CanAfford(level);
 
-        private async UniTaskVoid PulseRank()
-        {
-            var token = this.GetCancellationTokenOnDestroy();
-            var elapsed = 0f;
-            while (elapsed < RankPulseDuration)
-            {
-                elapsed += Time.deltaTime;
-                var wave = Mathf.Sin(elapsed / RankPulseDuration * Mathf.PI);
-                rankCard.localScale = Vector3.one * Mathf.LerpUnclamped(1f, RankPulseScale, wave);
-                await UniTask.Yield(PlayerLoopTiming.Update, token);
-            }
-            rankCard.localScale = Vector3.one;
-        }
-
         private void Pulse()
         {
+            var token = this.GetCancellationTokenOnDestroy();
             feedbackGroup.alpha = 1f;
-            feedbackGroup.GoFade(0f, FeedbackFadeDuration, token: this.GetCancellationTokenOnDestroy());
+            feedbackGroup.GoFade(0f, FeedbackFadeDuration, token: token);
+            feedbackText.rectTransform.GoPunch(FeedbackPunchScale, FeedbackPunchDuration, token);
         }
     }
 }

@@ -1,7 +1,6 @@
 using Core.DI.Attributes;
 using Cysharp.Threading.Tasks;
 using Game.Configuration.Interfaces;
-using Game.Input.Managers;
 using Game.Manager.Interfaces;
 using Game.Race.Interfaces;
 using UnityEngine;
@@ -26,7 +25,7 @@ namespace Game.States
             await _race.Build();
             var settings = _configService.Config.race;
             var seed = settings.randomizeSeed ? Random.Range(1, int.MaxValue) : settings.seed;
-            GameManager.ChangeState(new CountdownState(GameManager, seed, new KeyboardBoostInput()));
+            GameManager.ChangeState(new SetupState(GameManager, seed));
         }
     }
 }

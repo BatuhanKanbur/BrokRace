@@ -7,9 +7,11 @@ using Game.Balancing.Interfaces;
 using Game.Boost.Enums;
 using Game.Camera.Interfaces;
 using Game.Cars.Interfaces;
+using Game.Cars.Logics;
 using Game.Configuration.Interfaces;
 using Game.Configuration.Structure;
 using Game.Input.Interfaces;
+using Game.Options.Interfaces;
 using Game.Race.Interfaces;
 using Game.Race.Managers;
 using Game.Standings.Interfaces;
@@ -19,6 +21,7 @@ using Game.Track.Interfaces;
 using PoolManager.Runtime;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using static Game.Boost.Constants.BoostConstants;
 using static Game.Race.Constants.RaceConstants;
 using Pool = PoolManager.Runtime.PoolManager;
 
@@ -31,6 +34,8 @@ namespace Game.Race.Behaviours
         [Inject] private IRaceConfigService _configService;
         [Inject] private ITrackBuilder _trackBuilder;
         [Inject] private IRaceCamera _camera;
+        [Inject] private IBoostInputSource _input;
+        [Inject] private IRaceOptions _options;
 
         private readonly List<ICarView> _views = new();
 
@@ -52,23 +57,38 @@ namespace Game.Race.Behaviours
         {
             _config = _configService.Config;
             _loop = new RaceLoop(_config);
-            _loop.OnBoostAccepted += level => OnBoostAccepted?.Invoke(level);
+            _loop.OnBoostAccepted += HandleBoostAccepted;
             _loop.OnBoostRejected += (level, outcome) => OnBoostRejected?.Invoke(level, outcome);
+            _loop.OnPlayerFinished += _camera.Showcase;
             await _trackBuilder.Build(_config.track);
             var cars = await SpawnGrid();
             _loop.Register(cars, BuildLaneOffsets(cars.Count));
             _camera.Follow(_views[PlayerIndex].Transform, _config.race.baseSpeed);
         }
 
-        public void Prepare(int seed, IBoostInputSource input)
+        public void Prepare(int seed)
         {
             _accumulator = 0f;
-            _loop.Prepare(seed, input);
+            _loop.EnableBalancing(_options.IsBalancingEnabled);
+            _loop.SetRivalMode(_options.Rivals);
+            _loop.Prepare(seed, _input);
             _camera.Snap();
             Present(0f);
         }
 
-        public void Begin() => _loop.Begin();
+        public void SetLaunch(float progress)
+        {
+            var factor = LaunchRamp.Rate(progress);
+            var span = LaunchRamp.Offset(progress) * _config.race.launchDuration;
+            for (var index = 0; index < _views.Count; index++)
+                _views[index].SetLaunch(factor, span * _loop.Cars[index].NaturalSpeed);
+        }
+
+        public void Begin()
+        {
+            SetLaunch(1f);
+            _loop.Begin();
+        }
 
         public void PumpInput() => _loop.PumpInput();
 
@@ -101,6 +121,12 @@ namespace Game.Race.Behaviours
             foreach (var view in _views)
                 view.Release();
             _views.Clear();
+        }
+
+        private void HandleBoostAccepted(int level)
+        {
+            OnBoostAccepted?.Invoke(level);
+            _camera.Punch((level - MinLevel) / (float)LevelSpan);
         }
 
         private async UniTask<List<ICar>> SpawnGrid()

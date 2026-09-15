@@ -21,9 +21,9 @@ namespace Game.Configuration.Structure
             BoostCurve.TwoStep,
             BoostCurve.Surge
         };
-        [Range(1.1f, 3f)] public float punchSharpness = 1.5f;
-        [Range(0f, 0.95f)] public float twoStepDepth = 0.7f;
-        [Range(1.1f, 3f)] public float surgeSharpness = 1.45f;
+        [Range(0f, 1f)] public float curveSkew = 1f;
+        [Range(0f, 0.9f)] public float twoStepDepth = 0.5f;
+        [Range(0.05f, 0.45f)] public float plateauRamp = 0.18f;
         public Color[] levelColors =
         {
             new(0.75f, 0.78f, 0.82f),

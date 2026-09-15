@@ -21,6 +21,14 @@ namespace Game.UI.Views
 
         public bool IsOpen { get; private set; }
 
+        protected override void Initialize()
+        {
+            base.Initialize();
+            var monospace = Font.CreateDynamicFontFromOSFont(MonospaceFonts, bodyText.fontSize);
+            headerText.font = monospace;
+            bodyText.font = monospace;
+        }
+
         public void Bind(IReadOnlyList<IAiDriver> drivers)
         {
             _drivers.Clear();
@@ -28,11 +36,22 @@ namespace Game.UI.Views
                 _drivers[driver.CarIndex] = driver;
         }
 
+        public override void Show(float duration = 0.35f)
+        {
+            IsOpen = true;
+            base.Show(duration);
+        }
+
+        public override void Hide(float duration = 0.25f)
+        {
+            IsOpen = false;
+            base.Hide(duration);
+        }
+
         public void Toggle()
         {
-            IsOpen = !IsOpen;
-            if (IsOpen) Show(OverlayFadeDuration);
-            else Hide(OverlayFadeDuration);
+            if (IsOpen) Hide(OverlayFadeDuration);
+            else Show(OverlayFadeDuration);
         }
 
         public void Refresh(IRaceState race, IRaceOrder order, ITelemetryLog log, bool balancingSuspended)

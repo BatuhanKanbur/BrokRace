@@ -1,4 +1,4 @@
 rule,result,detail
-a boost running into the finish line crosses once and keeps the contract,PASS,crossings=1 boosting=True at=4.0987s extra=64m
+a boost running into the finish line crosses once and keeps the contract,PASS,crossings=1 boosting=True at=4.0999s extra=64m
 two cars crossing in one sub step are ordered by crossing time,PASS,reportedFirst=car0 winner=car1 early=16.0015s late=16.00675s gap=5.251ms
 back to back restarts reproduce the race exactly,PASS,first=57.0742s rank 1 boost 386.96m, second=57.0742s rank 1 boost 386.96m

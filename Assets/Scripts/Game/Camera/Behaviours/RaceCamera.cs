@@ -1,50 +1,55 @@
 using Game.Camera.Interfaces;
+using Game.Camera.Managers;
+using Game.Effects.Interfaces;
+using Game.Effects.Managers;
 using UnityEngine;
-using static Game.Camera.Constants.CameraConstants;
+using UnityEngine.Rendering;
 
 namespace Game.Camera.Behaviours
 {
     public class RaceCamera : MonoBehaviour, IRaceCamera
     {
-        private UnityEngine.Camera _lens;
-        private Transform _target;
-        private Vector3 _lastTargetPosition;
-        private float _referenceSpeed;
+        [SerializeField] private UnityEngine.Camera lens;
+        [SerializeField] private Volume volume;
 
-        private void Awake() => _lens = GetComponent<UnityEngine.Camera>();
+        private readonly ICameraRig _rig = new CameraRig();
+        private readonly ICameraShake _shake = new CameraShake();
+
+        private IScreenEffects _screen;
+
+        private void Awake() => _screen = new ScreenEffects(volume);
 
         public void Follow(Transform target, float referenceSpeed)
         {
-            _target = target;
-            _referenceSpeed = referenceSpeed;
-            _lastTargetPosition = target.position;
+            _rig.Follow(target, referenceSpeed);
             Snap();
         }
 
+        public void Showcase() => _rig.Showcase();
+
         public void Present(float deltaTime)
         {
-            var speed = deltaTime > 0f ? (_target.position - _lastTargetPosition).magnitude / deltaTime : 0f;
-            _lastTargetPosition = _target.position;
-            var desired = Anchor(speed);
-            transform.position = Vector3.Lerp(transform.position, desired, PositionLerp * deltaTime);
-            var focus = _target.position + _target.forward * LookAhead;
-            transform.rotation = Quaternion.Slerp(transform.rotation,
-                Quaternion.LookRotation(focus - transform.position), RotationLerp * deltaTime);
-            var widened = BaseFieldOfView + Mathf.Max(0f, speed - _referenceSpeed) * FieldOfViewPerSpeed;
-            _lens.fieldOfView = Mathf.Lerp(_lens.fieldOfView, Mathf.Min(widened, MaxFieldOfView),
-                FieldOfViewLerp * deltaTime);
+            _rig.Advance(deltaTime);
+            _shake.Advance(deltaTime);
+            transform.SetPositionAndRotation(_rig.Position + _rig.Rotation * _shake.Offset,
+                _rig.Rotation * Quaternion.Euler(0f, 0f, _shake.Roll));
+            lens.fieldOfView = _rig.FieldOfView + _shake.FieldOfViewKick;
+            _screen.Present(_rig.Intensity, deltaTime);
+        }
+
+        public void Punch(float strength)
+        {
+            _shake.Punch(strength);
+            _screen.Punch(strength);
         }
 
         public void Snap()
         {
-            transform.position = Anchor(0f);
-            transform.LookAt(_target.position + _target.forward * LookAhead);
-            _lens.fieldOfView = BaseFieldOfView;
+            _rig.Snap();
+            _shake.Reset();
+            _screen.Reset();
+            transform.SetPositionAndRotation(_rig.Position, _rig.Rotation);
+            lens.fieldOfView = _rig.FieldOfView;
         }
-
-        private Vector3 Anchor(float speed) =>
-            _target.position
-            - _target.forward * (FollowDistance + speed * SpeedPullback)
-            + Vector3.up * FollowHeight;
     }
 }

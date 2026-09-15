@@ -7,6 +7,9 @@ using Game.Cars.Interfaces;
 using Game.Cars.Managers;
 using Game.Cars.Structure;
 using Game.Configuration.Structure;
+using Game.Effects.Behaviours;
+using Game.Effects.Interfaces;
+using Game.Effects.Managers;
 using Game.Track.Interfaces;
 using UnityEngine;
 using static Game.Cars.Constants.CarConstants;
@@ -19,16 +22,21 @@ namespace Game.Cars.Behaviours
         [SerializeField] private Transform[] wheels;
         [SerializeField] private Transform body;
         [SerializeField] private TrailRenderer[] trails;
+        [SerializeField] private CarEffectRig effectRig;
         [SerializeField] private float wheelRadius = 0.3f;
 
         [Inject] private ITrackPath _track;
 
         private readonly BoostController _boost = new();
         private ICarVisual _visual;
+        private ICarEffects _effects;
         private ICarMotion _motion;
         private BoostSettings _settings;
+        private Color _paint;
         private float _laneOffset;
         private float _finishDistance;
+        private float _launchSpeedFactor = 1f;
+        private float _launchOffset;
 
         public Transform Transform => transform;
         public int Index { get; private set; }
@@ -52,9 +60,10 @@ namespace Game.Cars.Behaviours
         {
             base.Awake();
             _visual = new CarVisual(paintSlots, wheels, body, trails, wheelRadius);
+            _effects = new CarEffects(effectRig);
             _motion = new CarMotion(_boost, _boost);
             _boost.OnBoostStarted += PlayBoostCue;
-            _boost.OnBoostEnded += _visual.StopBoost;
+            _boost.OnBoostEnded += StopBoostCue;
         }
 
         public void Initialize(CarSetup setup)
@@ -62,6 +71,7 @@ namespace Game.Cars.Behaviours
             Index = setup.Index;
             DisplayName = setup.DisplayName;
             IsPlayer = setup.IsPlayer;
+            _paint = setup.Paint;
             _laneOffset = setup.LaneOffset;
             _finishDistance = setup.FinishDistance;
             _settings = setup.Boost;
@@ -71,20 +81,32 @@ namespace Game.Cars.Behaviours
 
             _boost.Configure(setup.Boost);
             _motion.Configure(setup.NaturalSpeed, setup.FinishDistance);
+            _launchSpeedFactor = 1f;
+            _launchOffset = 0f;
             _visual.Reset();
             _visual.Paint(setup.Paint);
+            _effects.Reset();
             transform.position = _track.GetPosition(0f, _laneOffset);
             transform.rotation = _track.GetRotation(0f);
         }
 
         public MotionStep Step(float stepTime) => _motion.Advance(stepTime);
 
+        public void SetLaunch(float speedFactor, float distanceOffset)
+        {
+            _launchSpeedFactor = speedFactor;
+            _launchOffset = distanceOffset;
+        }
+
         public void Present(float deltaTime)
         {
-            transform.position = _track.GetPosition(_motion.Distance, _laneOffset);
-            transform.rotation = Quaternion.Slerp(transform.rotation, _track.GetRotation(_motion.Distance),
+            var placement = _motion.Distance + _launchOffset;
+            transform.position = _track.GetPosition(placement, _laneOffset);
+            transform.rotation = Quaternion.Slerp(transform.rotation, _track.GetRotation(placement),
                 RotationBlendSpeed * deltaTime);
-            _visual.Present(_motion.Speed, _motion.Intensity, deltaTime);
+            var speed = _motion.Speed * _launchSpeedFactor;
+            _visual.Present(speed, _motion.Intensity, deltaTime);
+            _effects.Present(speed, _motion.Intensity, deltaTime);
         }
 
         public void SetBalanceScale(float scale) => _motion.SetBalanceScale(scale);
@@ -98,10 +120,22 @@ namespace Game.Cars.Behaviours
             HasFinished = true;
             FinishOrder = order;
             FinishTime = time;
+            _effects.Celebrate(_paint);
         }
 
         public void Release() => gameObject.SetActive(false);
 
-        private void PlayBoostCue(int level) => _visual.PlayBoost(level, BoostPalette.ForLevel(_settings, level));
+        private void PlayBoostCue(int level)
+        {
+            var color = BoostPalette.ForLevel(_settings, level);
+            _visual.PlayBoost(level, color);
+            _effects.Play(level, color);
+        }
+
+        private void StopBoostCue()
+        {
+            _visual.StopBoost();
+            _effects.Stop();
+        }
     }
 }

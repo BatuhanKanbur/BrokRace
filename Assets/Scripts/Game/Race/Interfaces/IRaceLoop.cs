@@ -1,4 +1,5 @@
 using System;
+using Game.Ai.Enums;
 using System.Collections.Generic;
 using Game.Ai.Interfaces;
 using Game.Balancing.Interfaces;
@@ -15,6 +16,7 @@ namespace Game.Race.Interfaces
     {
         public event Action<int> OnBoostAccepted;
         public event Action<int, BoostRequestOutcome> OnBoostRejected;
+        public event Action OnPlayerFinished;
         public bool HasCompleted { get; }
         public IRaceOrder Order { get; }
         public IRaceBalancer Balancer { get; }
@@ -22,6 +24,8 @@ namespace Game.Race.Interfaces
         public IReadOnlyList<IAiDriver> Drivers { get; }
         public void Register(IReadOnlyList<ICar> cars, float[] laneOffsets);
         public void Prepare(int seed, IBoostInputSource input);
+        public void EnableBalancing(bool enabled);
+        public void SetRivalMode(RivalMode mode);
         public void Begin();
         public void PollInput();
         public void PumpInput();

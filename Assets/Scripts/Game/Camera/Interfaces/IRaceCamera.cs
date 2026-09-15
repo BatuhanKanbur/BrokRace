@@ -5,7 +5,9 @@ namespace Game.Camera.Interfaces
     public interface IRaceCamera
     {
         public void Follow(Transform target, float referenceSpeed);
+        public void Showcase();
         public void Present(float deltaTime);
+        public void Punch(float strength);
         public void Snap();
     }
 }

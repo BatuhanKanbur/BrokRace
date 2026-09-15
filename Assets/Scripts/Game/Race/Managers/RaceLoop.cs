@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Core.Utilities;
+using Game.Ai.Enums;
 using Game.Ai.Interfaces;
+using Game.Ai.Logics;
 using Game.Ai.Managers;
 using Game.Balancing.Interfaces;
 using Game.Balancing.Managers;
@@ -19,6 +21,7 @@ using Game.Telemetry.Interfaces;
 using Game.Telemetry.Managers;
 using Game.Telemetry.Structure;
 using UnityEngine;
+using static Game.Ai.Constants.AiConstants;
 using static Game.Race.Constants.RaceConstants;
 
 namespace Game.Race.Managers
@@ -38,11 +41,14 @@ namespace Game.Race.Managers
         private TelemetryRecorder _telemetry;
         private IBoostInputSource _input;
         private float[] _laneOffsets;
+        private RivalMode _rivalMode;
+        private float _burstDeadline;
         private int[] _slotToProfile;
         private int _stepIndex;
 
         public event Action<int> OnBoostAccepted;
         public event Action<int, BoostRequestOutcome> OnBoostRejected;
+        public event Action OnPlayerFinished;
 
         public RaceLoop(RaceConfig config)
         {
@@ -90,6 +96,7 @@ namespace Game.Race.Managers
             _input.Reset();
             _input.OnBoostRequested += Enqueue;
 
+            _burstDeadline = _config.track.raceDistance * BurstProgress / _config.race.baseSpeed;
             _slotToProfile = ShuffledProfiles(seed);
             for (var index = 0; index < _cars.Count; index++)
                 _cars[index].Initialize(BuildSetup(index, seed));
@@ -113,6 +120,10 @@ namespace Game.Race.Managers
                 car.OpenBoostWindow();
             _telemetry.Begin(BuildRunInfo());
         }
+
+        public void EnableBalancing(bool enabled) => _balancer.Enable(enabled);
+
+        public void SetRivalMode(RivalMode mode) => _rivalMode = mode;
 
         public void PollInput() => _input.Poll();
 
@@ -166,7 +177,7 @@ namespace Game.Race.Managers
                 var driver = _drivers[(offset + slot) % _drivers.Count];
                 var car = _cars[driver.CarIndex];
                 if (car.HasFinished) continue;
-                var level = driver.Decide();
+                var level = RivalIntent.For(_rivalMode, driver.Decide(), Time, _burstDeadline);
                 if (level == 0 || !_airspace.TryClaim(Time)) continue;
                 RequestBoost(car, level);
             }
@@ -178,7 +189,10 @@ namespace Game.Race.Managers
             _finishing.AddRange(_crossings);
             _crossings.Clear();
             foreach (var crossing in _finishing)
+            {
                 crossing.Car.CloseBoostWindow();
+                if (crossing.Car.IsPlayer) OnPlayerFinished?.Invoke();
+            }
             _standings.ReportCrossings(_finishing, stepStart);
             if (_standings.FinishedCount < _cars.Count) return;
             Conclude();

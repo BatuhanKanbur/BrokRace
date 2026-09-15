@@ -21,6 +21,7 @@ namespace Editor
     {
         private static readonly CultureInfo Culture = CultureInfo.InvariantCulture;
 
+        [MenuItem(MenuPath)]
         public static void Run()
         {
             CultureInfo.DefaultThreadCurrentCulture = Culture;
@@ -28,14 +29,30 @@ namespace Editor
             var config = AssetDatabase.LoadAssetAtPath<RaceConfig>(ConfigPath);
             var output = Path.Combine(Directory.GetParent(Application.dataPath).FullName, ValidationFolder);
             Directory.CreateDirectory(output);
+            var configuredOutput = config.telemetry.outputDirectory;
             config.telemetry.outputDirectory = output;
 
-            WriteBoostContract(config, output);
-            WriteRaceMatrix(config, output);
-            WriteFrameRateTable(config, output);
-            WriteLifecycle(config, output);
+            try
+            {
+                Step(ContractStep, ContractProgress);
+                WriteBoostContract(config, output);
+                Step(MatrixStep, MatrixProgress);
+                WriteRaceMatrix(config, output);
+                Step(FrameStep, FrameProgress);
+                WriteFrameRateTable(config, output);
+                Step(LifecycleStep, LifecycleProgress);
+                WriteLifecycle(config, output);
+            }
+            finally
+            {
+                config.telemetry.outputDirectory = configuredOutput;
+                EditorUtility.ClearProgressBar();
+            }
             Debug.Log($"[RaceValidationRunner] written to {output} DONE");
         }
+
+        private static void Step(string label, float progress) =>
+            EditorUtility.DisplayProgressBar(ProgressTitle, label, progress);
 
         private static void WriteBoostContract(RaceConfig config, string output)
         {

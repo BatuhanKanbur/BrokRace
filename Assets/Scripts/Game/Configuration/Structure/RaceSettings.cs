@@ -8,6 +8,7 @@ namespace Game.Configuration.Structure
     {
         public float baseSpeed = 16f;
         [Range(1f, 6f)] public float countdownSeconds = 3f;
+        [Range(0f, 3f)] public float launchDuration = 1.4f;
         public float logicStep = 1f / 120f;
         public float maxFrameTime = 0.1f;
         public int seed = 20250912;

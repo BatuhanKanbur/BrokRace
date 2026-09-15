@@ -6,6 +6,7 @@ namespace Game.Boost.Enums
         Smooth,
         Punch,
         TwoStep,
-        Surge
+        Surge,
+        Plateau
     }
 }

@@ -4,7 +4,6 @@ using Cysharp.Threading.Tasks;
 using Game.Ai.Interfaces;
 using Game.Balancing.Interfaces;
 using Game.Boost.Enums;
-using Game.Input.Interfaces;
 using Game.Standings.Interfaces;
 using Game.Telemetry.Interfaces;
 using Game.Telemetry.Structure;
@@ -22,7 +21,8 @@ namespace Game.Race.Interfaces
         public ITelemetryLog Log { get; }
         public IReadOnlyList<IAiDriver> Drivers { get; }
         public UniTask Build();
-        public void Prepare(int seed, IBoostInputSource input);
+        public void Prepare(int seed);
+        public void SetLaunch(float progress);
         public void Begin();
         public void PumpInput();
         public void Tick(float frameTime);

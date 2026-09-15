@@ -15,6 +15,14 @@ namespace Core.Utilities
             AnimationCurve curve = null, CancellationToken token = default) =>
             FadeOperation(group, targetAlpha, duration, curve, token).Forget();
 
+        public static void GoTint(this Graphic graphic, Color targetColor, float duration,
+            AnimationCurve curve = null, CancellationToken token = default) =>
+            TintOperation(graphic, targetColor, duration, curve, token).Forget();
+
+        public static void GoPunch(this RectTransform target, float targetScale, float duration,
+            CancellationToken token = default) =>
+            PunchOperation(target, targetScale, duration, token).Forget();
+
         private static async UniTaskVoid FillOperation(Image image, float target, float duration,
             AnimationCurve curve, CancellationToken token)
         {
@@ -41,6 +49,34 @@ namespace Core.Utilities
                 await UniTask.Yield(PlayerLoopTiming.Update, token);
             }
             group.alpha = target;
+        }
+
+        private static async UniTaskVoid TintOperation(Graphic graphic, Color target, float duration,
+            AnimationCurve curve, CancellationToken token)
+        {
+            var start = graphic.color;
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                graphic.color = Color.Lerp(start, target, Shape(elapsed / duration, curve));
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
+            }
+            graphic.color = target;
+        }
+
+        private static async UniTaskVoid PunchOperation(RectTransform target, float targetScale, float duration,
+            CancellationToken token)
+        {
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var wave = Mathf.Sin(Mathf.Clamp01(elapsed / duration) * Mathf.PI);
+                target.localScale = Vector3.one * Mathf.LerpUnclamped(1f, targetScale, wave);
+                await UniTask.Yield(PlayerLoopTiming.Update, token);
+            }
+            target.localScale = Vector3.one;
         }
 
         private static float Shape(float progress, AnimationCurve curve)

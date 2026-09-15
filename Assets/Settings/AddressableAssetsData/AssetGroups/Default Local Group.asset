@@ -35,6 +35,11 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 4bd46531040058643b5a8051a201ab64
+    m_Address: Race_Track
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 4e8f12c486b79904ca2bed03d10911e1
     m_Address: Car_Rival_4
     m_ReadOnly: 0

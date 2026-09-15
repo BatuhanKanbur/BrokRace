@@ -15,6 +15,7 @@ MonoBehaviour:
   race:
     baseSpeed: 16
     countdownSeconds: 3
+    launchDuration: 1.4
     logicStep: 0.008333334
     maxFrameTime: 0.1
     seed: 20250912
@@ -25,6 +26,12 @@ MonoBehaviour:
     raceDistance: 1300
     roadWidth: 19
     laneSpacing: 2.2
+    trackPrefab:
+      m_AssetGUID: 4bd46531040058643b5a8051a201ab64
+      m_SubObjectName: 
+      m_SubObjectType: 
+      m_SubObjectGUID: 
+      m_EditorAssetChanged: 0
     shapePoints:
     - {x: 0, y: 0, z: 0}
     - {x: 0, y: 0, z: 220}
@@ -89,9 +96,9 @@ MonoBehaviour:
     - 44
     - 60
     levelCurves: 0000000001000000020000000300000004000000
-    punchSharpness: 1.5
+    curveSkew: 1
     twoStepDepth: 0.7
-    surgeSharpness: 1.45
+    plateauRamp: 0.18
     levelColors:
     - {r: 0.75, g: 0.78, b: 0.82, a: 1}
     - {r: 0.35, g: 0.8, b: 1, a: 1}

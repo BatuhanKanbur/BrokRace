@@ -116,9 +116,9 @@ namespace Game.Simulation.Logics
                 energyRegenPerSecond = source.energyRegenPerSecond,
                 levelCosts = source.levelCosts,
                 levelCurves = curves,
-                punchSharpness = source.punchSharpness,
+                curveSkew = source.curveSkew,
                 twoStepDepth = source.twoStepDepth,
-                surgeSharpness = source.surgeSharpness,
+                plateauRamp = source.plateauRamp,
                 levelColors = source.levelColors
             };
         }

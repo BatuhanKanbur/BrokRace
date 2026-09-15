@@ -1,7 +1,6 @@
 using Core.DI.Attributes;
 using Core.UI.Interfaces;
 using Game.Configuration.Interfaces;
-using Game.Input.Interfaces;
 using Game.Manager.Interfaces;
 using Game.Race.Interfaces;
 using Game.UI.Views;
@@ -17,26 +16,22 @@ namespace Game.States
         [Inject] private IUIManager _uiManager;
 
         private readonly int _seed;
-        private readonly IBoostInputSource _input;
         private CountdownView _view;
         private float _remaining;
         private int _shown;
 
-        public CountdownState(IGameManager gameManager, int seed, IBoostInputSource input) : base(gameManager)
-        {
-            _seed = seed;
-            _input = input;
-        }
+        public CountdownState(IGameManager gameManager, int seed) : base(gameManager) => _seed = seed;
 
         public override void Enter()
         {
-            _race.Prepare(_seed, _input);
+            _race.Prepare(_seed);
             _remaining = _configService.Config.race.countdownSeconds;
             _shown = -1;
             _view = _uiManager.GetView<CountdownView>();
             _view.SetHint(CountdownHint);
-            _uiManager.GetView<RaceHudView>().Bind(_configService.Config.boost);
+            _uiManager.GetView<RaceHudView>().Bind(_configService.Config.boost, _configService.Config.race);
             _uiManager.GetView<DebugOverlayView>().Bind(_race.Drivers);
+            _race.SetLaunch(0f);
             _uiManager.Show<CountdownView>();
             _uiManager.Show<RaceHudView>();
         }
@@ -51,9 +46,11 @@ namespace Game.States
                 _view.SetCount(count);
             }
             _race.PumpInput();
+            var launch = _configService.Config.race.launchDuration;
+            _race.SetLaunch(launch > 0f ? 1f - Mathf.Clamp01(_remaining / launch) : 1f);
             _race.Present(Time.deltaTime);
             if (_remaining > 0f) return;
-            GameManager.ChangeState(new RacingState(GameManager, _seed, _input));
+            GameManager.ChangeState(new RacingState(GameManager, _seed));
         }
 
         public override void Exit() => _view.Hide();

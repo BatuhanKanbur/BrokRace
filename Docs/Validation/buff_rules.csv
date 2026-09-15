@@ -6,5 +6,5 @@ countdown and post finish reject,PASS,beforeStart=NotRunning afterFinish=NotRunn
 level 1 is the reference level,PASS,window=16m coasting=16m extra=0m
 out of range levels clamp to 1..5,PASS,above=True below=True
 finish crossing time is sub step exact,PASS,crossings=1 solved=4.00417s exact=4.00417s step=0.00833s
-every curve delivers the same window distance,PASS,worst deviation 0.000103% on FLAT
-curves move the distance inside the window,PASS,first half share punch 0.646 flat 0.5 surge 0.366
+every curve delivers the same window distance,PASS,worst deviation 0.000119% on PUNCH
+curves move the distance inside the window,PASS,first half share punch 0.687 flat 0.5 surge 0.312

@@ -16,6 +16,16 @@ namespace Editor.Constants
         public const string FailLabel = "FAIL";
         public const string ZeroLabel = "0";
         public const float PercentScale = 100f;
+        public const string MenuPath = "Tools/BrokRace/Run Race Validation";
+        public const string ProgressTitle = "Race Validation";
+        public const string ContractStep = "Boost contract";
+        public const string MatrixStep = "Race matrix";
+        public const string FrameStep = "Frame rate";
+        public const string LifecycleStep = "Lifecycle";
+        public const float ContractProgress = 0f;
+        public const float MatrixProgress = 0.2f;
+        public const float FrameProgress = 0.75f;
+        public const float LifecycleProgress = 0.95f;
         public const string ContractHeader = "level,curve,logicStepsPerSecond,baseSpeed,expectedWindowDistance,measuredWindowDistance,expectedExtra,measuredExtra,boostedSeconds,deviationPercent";
         public const string RuleHeader = "rule,result,detail";
         public const string MatrixHeader = "scenario,seed,playerFinishTime,playerRank,accepted,rejected,energySpent,energyWasted,boostDistance,expectedBoostDistance,assistDistance,overtakesMade,overtakesConceded,finalGapAhead,finalGapBehind,finalGapToLeader,avgGapAheadLast20,avgGapBehindLast20,avgGapToLeaderLast20,packSpreadAtWinnerFinish,avgPackSpread,maxPackSpread,leadChanges";

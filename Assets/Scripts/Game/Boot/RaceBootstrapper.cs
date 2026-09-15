@@ -8,7 +8,11 @@ using Game.Camera.Interfaces;
 using Game.Configuration.Interfaces;
 using Game.Configuration.Managers;
 using Game.Configuration.Structure;
+using Game.Input.Interfaces;
+using Game.Input.Managers;
 using Game.Manager.Interfaces;
+using Game.Options.Interfaces;
+using Game.Options.Managers;
 using Game.Manager.Managers;
 using Game.Race.Interfaces;
 using Game.Race.Behaviours;
@@ -45,11 +49,15 @@ namespace Game.Boot
             DiContainer.Register<IRaceCamera>(raceCamera);
             DiContainer.Register<IRaceManager>(raceManager);
             DiContainer.Register<IGameManager>(gameManager);
+            var boostInput = new ButtonBoostInput();
+            DiContainer.Register<IBoostInputSource>(boostInput);
+            DiContainer.Register<IBoostRequestSink>(boostInput);
             foreach (var view in views)
                 uiManager.RegisterView(view);
 
             await configService.Load();
             DiContainer.Register<ITelemetryWriter>(new TelemetryFileWriter(configService.Config.telemetry));
+            DiContainer.Register<IRaceOptions>(new RaceOptionsManager(configService.Config.balance.enabled));
             DiContainer.Inject(raceManager);
             gameManager.ChangeState(new RaceBootState(gameManager));
         }

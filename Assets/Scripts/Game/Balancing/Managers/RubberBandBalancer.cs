@@ -16,7 +16,7 @@ namespace Game.Balancing.Managers
         private readonly Dictionary<int, float> _scales = new();
         private readonly Dictionary<int, float> _responses = new();
 
-        public bool IsEnabled => _settings.enabled;
+        public bool IsEnabled { get; private set; }
         public bool IsSuspended { get; private set; }
 
         public RubberBandBalancer(BalanceSettings settings, IRaceState race, IRaceOrder order)
@@ -24,7 +24,10 @@ namespace Game.Balancing.Managers
             _settings = settings;
             _race = race;
             _order = order;
+            IsEnabled = settings.enabled;
         }
+
+        public void Enable(bool enabled) => IsEnabled = enabled;
 
         public float ScaleFor(ICarProgress car) => _scales[car.Index];
 
@@ -32,7 +35,7 @@ namespace Game.Balancing.Managers
 
         public void Step(float stepTime)
         {
-            if (!_settings.enabled) return;
+            if (!IsEnabled) return;
             var player = _race.Player;
             IsSuspended = IsPlayerCoasting(player);
             var leader = _order.Leader;
